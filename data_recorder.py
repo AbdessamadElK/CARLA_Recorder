@@ -118,71 +118,89 @@ def add_open3d_axis(vis):
 
     vis.add_geometry(axis)
 
+class DataCollector():
+    # The data collector must connect with CARLA, retreive the world and pass everything to each DataRecorder
+    # A separate data recorder is used for each Scenario to record a sequence
+    def __init__(self, global_config, scenarios):
+        # config
+        self.config = global_config
+        self.scenarios = scenarios
 
-class DataRecorder():
-    def __init__(self, args, host = 'localhost', port = 2000, timeout = 10, sensors = 'all', duration = 20):     
-        self.save_dir = Path("./out")
+        # save_dir
+        self.save_dir = Path(self.config["collector"]["save_dir"])
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
+        # client
+        self.client =  carla.Client(self.config["client"]["host"], self.config["client"]["port"])
+        self.client.set_timeout(self.config["client"]["timeout"])
+
+
+    def collect(self):
+        # Get maps
+        for scenario_args in self.scenarios.values():
+            recorder = DataRecorder(self.client, scenario_args, self.config, self.save_dir)
+            recorder.record()
+
+
+class DataRecorder():
+    def __init__(self, client, args, global_config, save_dir_root):     
         self.args = args
-        self.duration = duration / 0.1 # divide by timestep
+        self.global_config = global_config
+        rand_seed = self.global_config["collector"]["random_seed"]
+
+        self.save_dir = save_dir_root / args["name"]
+        self.save_dir.mkdir(parents=True, exist_ok=True)
+
+        self.duration = args["recording_duration"] * 60
 
         self.vehicles_list = []
         self.walkers_list = []
         self.all_id = []
 
+        # Client and world
+        self.client = client
+        
+        # world and traffic manager
+        self.world = self.client.load_world(args['map'])
 
-        # Init client
-        self.client = carla.Client(host, port)
-        self.client.set_timeout(timeout)
-        self.synchronous_master = False
-        random.seed(args.seed if args.seed is not None else int(time.time()))
-
-        # Init world
-        self.world = self.client.get_world()
-        self.traffic_manager = self.client.get_trafficmanager(args.tm_port)
-        self.traffic_manager.set_global_distance_to_leading_vehicle(2.5)
-
-        # Spectator
+        # spectator
         self.spectator = self.world.get_spectator()
 
-        # Traffic manager
-        if args.respawn:
+        self.traffic_manager = self.client.get_trafficmanager(global_config["traffic_manager"]["tm_port"])
+        self.traffic_manager.set_global_distance_to_leading_vehicle(2.5)
+
+        if global_config["traffic_manager"]["respawn"]:
             self.traffic_manager.set_respawn_dormant_vehicles(True)
-        if args.hybrid:
+        if global_config["traffic_manager"]["hybrid"]:
             self.traffic_manager.set_hybrid_physics_mode(True)
             self.traffic_manager.set_hybrid_physics_radius(70.0)
-        if args.seed is not None:
-            self.traffic_manager.set_random_device_seed(args.seed)
+        if rand_seed is not None:
+            self.traffic_manager.set_random_device_seed(rand_seed)
+        
+        self.synchronous_master = False
+        random.seed(rand_seed if rand_seed is not None else int(time.time()))
 
         # Activate synchronous mode with a fixed time step
+        self.synchronous_master = False
         settings = self.world.get_settings()
         self.traffic_manager.set_synchronous_mode(True)
         settings.synchronous_mode = True
-        settings.fixed_delta_seconds = 0.1
-
-        # if not args.asynch:
-        #     if not settings.synchronous_mode:
-        #         self.synchronous_master = True
-        #         settings.synchronous_mode = True
-        #         settings.fixed_delta_seconds = 0.05
-        #     else:
-        #         self.synchronous_master = False
-        # else:
-        #     print("You are currently in asynchronous mode. If this is a traffic simulation, \
-        #     you could experience some issues. If it's not working correctly, switch to synchronous \
-        #     mode by using traffic_manager.set_synchronous_mode(True)")
+        settings.fixed_delta_seconds = global_config["simulation"]["time_step"]
 
         # Rendering
-        if args.no_rendering:
+        if global_config["simulation"]["no_rendering"]:
             settings.no_rendering_mode = True
         self.world.apply_settings(settings)
 
+        # Weather settings
+        # weather = carla.WeatherParameters(**args["weather"])
+        # self.world.set_weather(weather)
+
         # Blueprints
-        self.blueprints = get_actor_blueprints(self.world, args.filterv, args.generationv)
-        self.blueprintsWalkers = get_actor_blueprints(self.world, args.filterw, args.generationw)
+        self.blueprints = get_actor_blueprints(self.world, global_config["simulation"]["filterv"], global_config["simulation"]["generationv"])
+        self.blueprintsWalkers = get_actor_blueprints(self.world, global_config["simulation"]["filterw"], global_config["simulation"]["generationw"])
         
-        if args.safe:
+        if global_config["traffic_manager"]["safe"]:
             self.blueprints = [x for x in self.blueprints if x.get_attribute('base_type') == 'car']
 
         self.blueprints = sorted(self.blueprints, key=lambda bp: bp.id)
@@ -191,12 +209,12 @@ class DataRecorder():
         self.spawn_points = self.world.get_map().get_spawn_points()
         number_of_spawn_points = len(self.spawn_points)
 
-        if args.number_of_vehicles < number_of_spawn_points:
+        if args["number_of_vehicles"] < number_of_spawn_points:
             random.shuffle(self.spawn_points)
-        elif args.number_of_vehicles > number_of_spawn_points:
+        elif args["number_of_vehicles"] > number_of_spawn_points:
             msg = 'requested %d vehicles, but could only find %d spawn points'
-            logging.warning(msg, args.number_of_vehicles, number_of_spawn_points)
-            args.number_of_vehicles = number_of_spawn_points
+            logging.warning(msg, args["number_of_vehicles"], number_of_spawn_points)
+            args["number_of_vehicles"] = number_of_spawn_points
 
         # Spwan vehicles And Walkers
 
@@ -220,25 +238,30 @@ class DataRecorder():
         # TODO : make the sensor settings part of the global configuration
 
         self.sensors = []
-        self.available_sensors = ['optical_flow', 'rgb', 'semantic_segmentation', 'dvs', 'lidar']
+        sensors_seetings = global_config["sensors"]
+        self.available_sensors = sensors_seetings["available"]
         self.visualizable_sensors = ['optical_flow', 'semantic_segmentation', 'dvs']
+        self.visualize = {key : (key in sensors_seetings["visualize"]) for key in self.available_sensors}
 
-        # TODO : Use this dictionnary to control visualization
-        self.visualize = {'optical_flow':True,
-                          'semantic_segmentation':True,
-                          'dvs':True,
-                          'lidar':True}
+        # self.visualize = {'optical_flow':True,
+        #                   'semantic_segmentation':True,
+        #                   'dvs':True}
         
-        if sensors == 'all':
+        enabled_sensors = sensors_seetings["enable"]
+        if enabled_sensors == 'all':
             self.sensor_names = self.available_sensors
             self.lidar = True       # Will be replaced by the lidar object after spawning
         else:
-            assert type(sensors) == list
-            self.lidar = 'lidar' in sensors            
-            self.sensor_names = sensors
+            assert type(enabled_sensors) == list
+            self.lidar = 'lidar' in enabled_sensors             
+            self.sensor_names = enabled_sensors
 
         self.sensor_queues = {key:queue.Queue() for key in self.sensor_names}
         self.spawn_sensors()
+
+
+        # Testing event cumulator
+        self.events_cumulator = {'t' : [], 'x' : [], 'y' : [], 'pol' : []}
 
         return
         
@@ -250,35 +273,26 @@ class DataRecorder():
             dir.mkdir(parents=True, exist_ok=True)
 
         # Visualization dirs
-        self.visual_dirs = {key: self.save_dir / 'visualizations' / key for key in self.sensor_names if (key in self.visualizable_sensors)}
+        self.visual_dirs = {key: self.save_dir / 'visualizations' / key for key in self.sensor_names if self.visualize[key]}
         for dir in self.visual_dirs.values():
             dir.mkdir(parents=True, exist_ok=True)
         
         # TODO : Make settings part of the global configuration
-        self.sensor_settings = {'image_size_x': '640',
-                                'image_size_y': '480',
-                                'shutter_speed': '200',
-                                'sensor_tick': '0.05'}
+        sensor_settings = self.global_config["sensors"]
+        sensor_global_settings = sensor_settings["settings_all"]
+
         if self.lidar:
-            lidar_settings = {
-                'range' : '100.0',
-                'noise_stddev' : '0.1',
-                'upper_fov' : '15.0',
-                'lower_fov' : '-25.0',
-                'channels' : '64.0',
-                'rotation_frequency' : '20.0',
-                'points_per_second' : '500000',
-                'sensor_tick':'0.05'
-            }
-                
+            lidar_settings = self.global_config["sensors"]["lidar"]
+
+        sensors_location = carla.Location(**self.global_config["sensors"]["location"])
         for s_name in self.sensor_names:
             if  s_name == "lidar" and self.lidar:
                 # Create Lidar
                 lidar_bp = self.world.get_blueprint_library().find("sensor.lidar.ray_cast")
                 for key, value in lidar_settings.items():
-                    lidar_bp.set_attribute(key, value)
+                    lidar_bp.set_attribute(key, str(value))
 
-                lidar_transform = carla.Transform(carla.Location(x=1, y=0, z=1.5))
+                lidar_transform = carla.Transform(sensors_location)
                 self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero)
                 self.sensors.append(self.lidar)
 
@@ -288,11 +302,15 @@ class DataRecorder():
                 # Create camera
                 camera_bp = self.world.get_blueprint_library().find(f"sensor.camera.{s_name}")
                 
-                for key, value in self.sensor_settings.items():
+                for key, value in sensor_global_settings.items():
                     if camera_bp.has_attribute(key):
-                        camera_bp.set_attribute(key, value)
+                        camera_bp.set_attribute(key, str(value))
 
-                camera_transform = carla.Transform(carla.Location(x=1, y=0, z=1.5))
+                for key, value in sensor_settings[s_name].items():
+                    if camera_bp.has_attribute(key):
+                        camera_bp.set_attribute(key, str(value))
+
+                camera_transform = carla.Transform(sensors_location)
                 camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to = self.hero)
                 self.sensors.append(camera)
                 print(f'Created {camera.type_id}')
@@ -302,7 +320,7 @@ class DataRecorder():
         batch = []
         hero = False # Hero is spawned separately
         for n, transform in enumerate(self.spawn_points):
-            if n >= self.args.number_of_vehicles:
+            if n >= self.args["number_of_vehicles"]:
                 break
             blueprint = random.choice(self.blueprints)
             if blueprint.has_attribute('color'):
@@ -328,7 +346,7 @@ class DataRecorder():
                 self.vehicles_list.append(response.actor_id)
 
         # Set automatic vehicle lights update if specified
-        if self.args.car_lights_on:
+        if self.args["car_lights_on"]:
             all_vehicle_actors = self.world.get_actors(self.vehicles_list)
             for actor in all_vehicle_actors:
                 self.traffic_manager.update_vehicle_lights(actor, True)
@@ -344,12 +362,12 @@ class DataRecorder():
         # some settings
         percentagePedestriansRunning = 0.0      # how many pedestrians will run
         percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
-        if self.args.seedw:
-            self.world.set_pedestrians_seed(self.args.seedw)
-            random.seed(self.args.seedw)
+        if self.args["seed_walkers"]:
+            self.world.set_pedestrians_seed(self.args["seed_walkers"])
+            random.seed(self.args["seed_walkers"])
         # 1. take all the random locations to spawn
         spawn_points = []
-        for i in range(self.args.number_of_walkers):
+        for i in range(self.args["number_of_walkers"]):
             spawn_point = carla.Transform()
             loc = self.world.get_random_location_from_navigation()
             if (loc != None):
@@ -430,61 +448,6 @@ class DataRecorder():
         for sensor in self.sensors:
             sensor.stop()
 
-
-
-    def record(self):
-        try:
-            print("Recording... press ctl+c to force exit")
-            end_time = time.time() + self.duration
-            self.start_recording()
-            while True:
-                self.world.tick()
-                w_frame = self.world.get_snapshot().frame
-                print("\nWorld's frame: {}".format(w_frame))
-
-                # Wait for all data to be read and all callbacks to be executed using a queue.
-                try:
-                    for queue in self.sensor_queues.values():
-                        s_frame = queue.get(True, 1.0)
-                        print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
-                except Empty:
-                    print("Some of the sensor information is missed")
-
-                if time.time() > end_time:
-                    break
-            self.stop_recording()
-
-        except KeyboardInterrupt:
-            self.stop_recording()
-            print("Quitting...")
-            pass
-
-        finally:
-            # Disable Synchronous mode, no rendering mode and fixed time step
-            settings = self.world.get_settings()
-            settings.synchronous_mode = False
-            settings.no_rendering_mode = False
-            settings.fixed_delta_seconds = None
-            self.world.apply_settings(settings)
-
-            # Destroy vehicles
-            print('\ndestroying %d sensors' % len(self.sensors))
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensors])
-
-            # Destroy vehicles
-            print('\ndestroying %d vehicles' % len(self.vehicles_list))
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.vehicles_list])
-
-            # stop walker controllers (list is [controller, actor, controller, actor ...])
-            for i in range(0, len(self.all_id), 2):
-                self.all_actors[i].stop()
-
-            # Destroy all walkers
-            print('\ndestroying %d walkers' % len(self.walkers_list))
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.all_id])
-
-            time.sleep(0.5)
- 
     def get_callback(self, type_id):
         if "rgb" in type_id:
             return partial(self.rgb_callback,
@@ -507,6 +470,7 @@ class DataRecorder():
             return partial(self.dvs_callback,
                            save_dir = self.data_save_dirs["dvs"],
                            vis_dir = self.visual_dirs["dvs"],
+                           cumulator = self.events_cumulator,
                            sensor_queue = self.sensor_queues["dvs"])
         
         elif "lidar" in type_id :
@@ -546,14 +510,14 @@ class DataRecorder():
 
         # Visualize
         if vis_dir is not None:
-            rgb, _ = visualize_optical_flow(flow_uv[:,:,:2])
-            rgb *= 255
-            imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), rgb.astype('uint8'))
-            # vis = flow_uv_to_colors(u = flow_uv[:,:,0], v = flow_uv[:,:,1])
-            # imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), vis.astype('uint8'))
+            # rgb, _ = visualize_optical_flow(flow_uv[:,:,:2])
+            # rgb *= 255
+            # imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), rgb.astype('uint8'))
+            vis = flow_uv_to_colors(u = flow_uv[:,:,0], v = flow_uv[:,:,1])
+            imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), vis.astype('uint8'))
 
         # Save flow
-        flow_uv = flow_uv * 256.0 * 128.0 + 2**15 
+        flow_uv = flow_uv * 128.0 + 2**15 
         flow_uv[:,:,2] = 1
         imageio.imwrite(str(save_dir / f'{flow.frame}.png'), flow_uv.astype(np.uint16), format='PNG-FI')
 
@@ -561,11 +525,42 @@ class DataRecorder():
 
 
     @staticmethod
-    def dvs_callback(events, save_dir, sensor_queue, vis_dir = None):
+    def dvs_callback(events, save_dir, sensor_queue, cumulator, vis_dir = None):
         dvs_events = np.frombuffer(events.raw_data, dtype=np.dtype([
             ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', bool)]))
         
+        # Try cumulating events from multiple short time windows
+        # for key in cumulator:
+        #     cumulator[key].append(dvs_events[:][key].copy())
+
+        # if len(cumulator['x']) >= 100:
+        #     # print(np.shape(cumulator['x'][0]))
+        #     # print(np.shape(cumulator['x'][1]))
+        #     x = np.concatenate(cumulator['x'], dtype=np.uint16)
+        #     y = np.concatenate(cumulator['y'], dtype=np.uint16)
+        #     t = np.concatenate(cumulator['t'], dtype=np.int64)
+        #     pol = np.concatenate(cumulator['pol'], dtype=bool)
+
+        #     # print(np.min(x), np.max(x), np.mean(x), sep="\t")
+
+        #     if vis_dir is not None:
+        #         dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
+        #         dvs_image[y[:], x[:], pol[:] * 2] = 255
+        #         imageio.imwrite(str(vis_dir / f'{events.frame}.png'), dvs_image)
+
+        #     for key in cumulator:
+        #         cumulator[key] = []
+        
         # TODO : Save events in the proper format
+
+        # x = dvs_events[:]['x']
+        # y = dvs_events[:]['y']
+        # t = dvs_events[:]['t']
+        # p = dvs_events[:]['pol'].astype(int)
+
+        # events = np.stack()
+
+        # np.savez(str(save_dir / f'{events.frame}.npz', x = x, y = y, t = t, p = p))
         
         if vis_dir is not None:
             dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
@@ -598,3 +593,55 @@ class DataRecorder():
         point_list.points = o3d.utility.Vector3dVector(points)
         point_list.colors = o3d.utility.Vector3dVector(int_color)
 
+
+    def record(self):
+        try:
+            print(f"Recording {self.args['name']} [Duration : {self.duration} seconds] ... press ctl+c to force exit")
+            end_time = time.time() + self.duration
+            self.start_recording()
+            while True:
+                self.world.tick()
+                w_frame = self.world.get_snapshot().frame
+                # print("\nWorld's frame: {}".format(w_frame))
+
+                # Wait for all data to be read and all callbacks to be executed using a queue.
+                # try:
+                #     for queue in self.sensor_queues.values():
+                #         s_frame = queue.get(True, 1.0)
+                # except Empty:
+                #     print("Some of the sensor information is missed")
+
+                if time.time() > end_time:
+                    break
+            self.stop_recording()
+
+        except KeyboardInterrupt:
+            self.stop_recording()
+            print("Quitting...")
+            pass
+
+        finally:
+            # Disable Synchronous mode, no rendering mode and fixed time step
+            settings = self.world.get_settings()
+            settings.synchronous_mode = False
+            settings.no_rendering_mode = False
+            settings.fixed_delta_seconds = None
+            self.world.apply_settings(settings)
+
+            # Destroy vehicles
+            print('\ndestroying %d sensors' % len(self.sensors))
+            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensors])
+
+            # Destroy vehicles
+            print('\ndestroying %d vehicles' % len(self.vehicles_list))
+            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.vehicles_list])
+
+            # stop walker controllers (list is [controller, actor, controller, actor ...])
+            for i in range(0, len(self.all_id), 2):
+                self.all_actors[i].stop()
+
+            # Destroy all walkers
+            print('\ndestroying %d walkers' % len(self.walkers_list))
+            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.all_id])
+
+            time.sleep(0.5)
