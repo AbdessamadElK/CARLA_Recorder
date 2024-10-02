@@ -138,16 +138,24 @@ class DataCollector():
     def collect(self):
         # Get maps
         for scenario_args in self.scenarios.values():
-            recorder = DataRecorder(scenario_args, self.config, self.save_dir)
+            recorder = DataRecorder(scenario_args, self.config)
             recorder.record()
 
+def record_scenario(scenario_id:int, global_config, scenarios):
+    scenario_name = f"Scenario {scenario_id}"
+    assert scenario_name in scenarios
+
+    recorder = DataRecorder(scenarios[scenario_name], global_config)
+    recorder.record()
+    time.sleep(1)
 
 class DataRecorder():
-    def __init__(self, args, global_config, save_dir_root):     
+    def __init__(self, args, global_config):     
         self.args = args
         self.global_config = global_config
         rand_seed = self.global_config["collector"]["random_seed"]
 
+        save_dir_root = global_config["collector"]["save_dir"]
         self.save_dir = save_dir_root / args["name"]
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -554,7 +562,7 @@ class DataRecorder():
         #     for key in cumulator:
         #         cumulator[key] = []
         
-        # Save events in the proper format
+        # Save events
 
         x = dvs_events[:]['x']
         y = dvs_events[:]['y']
@@ -624,7 +632,7 @@ class DataRecorder():
             pass
 
         finally:
-            # Disable Synchronous mode, no rendering mode and fixed time step
+            # Disable Synchronous mode and reactivate rendering
             # settings = self.world.get_settings()
             # settings.synchronous_mode = False
             # settings.no_rendering_mode = False
