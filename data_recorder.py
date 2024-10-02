@@ -558,8 +558,8 @@ class DataRecorder():
         t = dvs_events[:]['t']
         p = dvs_events[:]['pol'].astype(int)
 
-        events = np.stack([x, y, t, p], axis=1)
-        np.save(str(save_dir / f'{events.frame}.npy', events))
+        events_stream = np.stack([x, y, t, p], axis=1)
+        np.save(str(save_dir / f'{events.frame}.npy'), events_stream)
         
         # Visualize events
         if vis_dir is not None:
