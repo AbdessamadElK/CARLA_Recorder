@@ -551,17 +551,17 @@ class DataRecorder():
         #     for key in cumulator:
         #         cumulator[key] = []
         
-        # TODO : Save events in the proper format
+        # Save events in the proper format
 
-        # x = dvs_events[:]['x']
-        # y = dvs_events[:]['y']
-        # t = dvs_events[:]['t']
-        # p = dvs_events[:]['pol'].astype(int)
+        x = dvs_events[:]['x']
+        y = dvs_events[:]['y']
+        t = dvs_events[:]['t']
+        p = dvs_events[:]['pol'].astype(int)
 
-        # events = np.stack()
-
-        # np.savez(str(save_dir / f'{events.frame}.npz', x = x, y = y, t = t, p = p))
+        events = np.stack([x, y, t, p], axis=1)
+        np.save(str(save_dir / f'{events.frame}.npy', events))
         
+        # Visualize events
         if vis_dir is not None:
             dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
             dvs_image[dvs_events[:]['y'], dvs_events[:]['x'], dvs_events[:]['pol'] * 2] = 255
