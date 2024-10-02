@@ -131,19 +131,19 @@ class DataCollector():
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
         # client
-        self.client =  carla.Client(self.config["client"]["host"], self.config["client"]["port"])
-        self.client.set_timeout(self.config["client"]["timeout"])
+        # self.client =  carla.Client(self.config["client"]["host"], self.config["client"]["port"])
+        # self.client.set_timeout(self.config["client"]["timeout"])
 
 
     def collect(self):
         # Get maps
         for scenario_args in self.scenarios.values():
-            recorder = DataRecorder(self.client, scenario_args, self.config, self.save_dir)
+            recorder = DataRecorder(scenario_args, self.config, self.save_dir)
             recorder.record()
 
 
 class DataRecorder():
-    def __init__(self, client, args, global_config, save_dir_root):     
+    def __init__(self, args, global_config, save_dir_root):     
         self.args = args
         self.global_config = global_config
         rand_seed = self.global_config["collector"]["random_seed"]
@@ -158,7 +158,10 @@ class DataRecorder():
         self.all_id = []
 
         # Client and world
-        self.client = client
+        host = global_config["client"]["host"]
+        port = global_config["client"]["port"]
+        self.client = carla.Client(host, port)
+        self.client.set_timeout(global_config["client"]["timeout"])
         
         # world and traffic manager
         self.world = self.client.load_world(args['map'])
@@ -193,8 +196,8 @@ class DataRecorder():
         self.world.apply_settings(settings)
 
         # Weather settings
-        # weather = carla.WeatherParameters(**args["weather"])
-        # self.world.set_weather(weather)
+        weather = carla.WeatherParameters(**args["weather"])
+        self.world.set_weather(weather)
 
         # Blueprints
         self.blueprints = get_actor_blueprints(self.world, global_config["simulation"]["filterv"], global_config["simulation"]["generationv"])
@@ -260,7 +263,7 @@ class DataRecorder():
         self.spawn_sensors()
 
 
-        # Testing event cumulator
+        # Events cumulator (under test)
         self.events_cumulator = {'t' : [], 'x' : [], 'y' : [], 'pol' : []}
 
         return
@@ -559,13 +562,13 @@ class DataRecorder():
         p = dvs_events[:]['pol'].astype(int)
 
         events_stream = np.stack([x, y, t, p], axis=1)
-        np.save(str(save_dir / f'{events.frame}.npy'), events_stream)
+        np.save(str(save_dir / f'{events.frame-1}.npy'), events_stream)
         
         # Visualize events
         if vis_dir is not None:
             dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
             dvs_image[dvs_events[:]['y'], dvs_events[:]['x'], dvs_events[:]['pol'] * 2] = 255
-            imageio.imwrite(str(vis_dir / f'{events.frame}.png'), dvs_image)
+            imageio.imwrite(str(vis_dir / f'{events.frame-1}.png'), dvs_image)
 
         sensor_queue.put((events.frame, 'dvs_camera'))
 
@@ -622,11 +625,11 @@ class DataRecorder():
 
         finally:
             # Disable Synchronous mode, no rendering mode and fixed time step
-            settings = self.world.get_settings()
-            settings.synchronous_mode = False
-            settings.no_rendering_mode = False
-            settings.fixed_delta_seconds = None
-            self.world.apply_settings(settings)
+            # settings = self.world.get_settings()
+            # settings.synchronous_mode = False
+            # settings.no_rendering_mode = False
+            # settings.fixed_delta_seconds = None
+            # self.world.apply_settings(settings)
 
             # Destroy vehicles
             print('\ndestroying %d sensors' % len(self.sensors))
@@ -644,4 +647,4 @@ class DataRecorder():
             print('\ndestroying %d walkers' % len(self.walkers_list))
             self.client.apply_batch([carla.command.DestroyActor(x) for x in self.all_id])
 
-            time.sleep(0.5)
+            time.sleep(3)
