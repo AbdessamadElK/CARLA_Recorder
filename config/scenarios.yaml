@@ -1,43 +1,43 @@
 ### TOWN_01_DAY
-Scenario 1:
-  name : town_01_day
-  map : Town01
-  number_of_vehicles : 30
-  number_of_walkers : 10
-  seed_walkers : 0
-  weather :
-    sun_azimuth_angle : 120.0
-    sun_altitude_angle : 45.0
-    cloudiness : 8.0
-    # precipitation : 0.0
-    # precipitation_deposits: 0.0
-    # wind_intensity : 20.0
-    # fog_density : 0.1
-    # wetness : 0.0
-    # fog_falloff : 0.0
-    # scattering_intensity : 0.0
-    # mie_scattering_scale : 0.0
-    # rayleigh_scattering_scale : 0.0
-    # dust_storm : 0.0
-  car_lights_on : False
-  recording_duration : 15 #minutes
+# Scenario 1:
+#   name : town_01_day
+#   map : Town01
+#   number_of_vehicles : 30
+#   number_of_walkers : 10
+#   seed_walkers : 0
+#   weather :
+#     sun_azimuth_angle : 120.0
+#     sun_altitude_angle : 45.0
+#     cloudiness : 8.0
+#     # precipitation : 0.0
+#     # precipitation_deposits: 0.0
+#     # wind_intensity : 20.0
+#     # fog_density : 0.1
+#     # wetness : 0.0
+#     # fog_falloff : 0.0
+#     # scattering_intensity : 0.0
+#     # mie_scattering_scale : 0.0
+#     # rayleigh_scattering_scale : 0.0
+#     # dust_storm : 0.0
+#   car_lights_on : False
+#   recording_duration : 15 #minutes
 
 
-### TOWN_01_EVENING
-Scenario 2:
-  name : town_01_evening
-  map : Town01
-  number_of_vehicles : 31
-  number_of_walkers : 10
-  seed_walkers : 0
+# ### TOWN_01_EVENING
+# Scenario 2:
+#   name : town_01_evening
+#   map : Town01
+#   number_of_vehicles : 31
+#   number_of_walkers : 10
+#   seed_walkers : 0
 
-  weather :
-    sun_azimuth_angle : 135.0
-    sun_altitude_angle : 12.0
-    cloudiness : 9.0
+#   weather :
+#     sun_azimuth_angle : 135.0
+#     sun_altitude_angle : 12.0
+#     cloudiness : 9.0
 
-  car_lights_on : True
-  recording_duration : 15 #minutes
+#   car_lights_on : True
+#   recording_duration : 15 #minutes
 
 
 ### TOWN_01_NIGHT
@@ -313,7 +313,7 @@ Scenario 18:
     cloudiness : 1.5
 
   car_lights_on : False
-  recording_duration : 2 #minutes
+  recording_duration : 15 #minutes
 
 
 ### TOWN_11_DAY

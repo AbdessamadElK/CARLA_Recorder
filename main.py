@@ -34,4 +34,7 @@ if __name__ == "__main__":
     with open(SCENARIOS_CONFIG) as scenarios_cfg:
         scenarios = yaml.safe_load(scenarios_cfg)
 
-    record_scenario(args.scenario, global_config, scenarios)
+    collector = DataCollector(global_config, scenarios)
+    collector.collect()
+
+    # record_scenario(args.scenario, global_config, scenarios)
