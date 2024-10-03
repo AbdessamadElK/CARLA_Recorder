@@ -5,4 +5,4 @@ A data collector based on CARLA Simulator. Used to generate driving datasets tha
 
 # How to run a simulation ?
 python main.py -s \<id\>\
-where <id> is the number of a scenario from config/scenarios.yaml
+where \<id\> is the number of a scenario from config/scenarios.yaml
