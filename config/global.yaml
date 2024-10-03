@@ -1,5 +1,5 @@
 collector:
-  save_dir : "C:/users/abdessamad/CARLA_DATA/Dataset0"
+  save_dir : "C:/users/abdessamad/CARLA_DATA/DATASET_TESTS"
   random_seed : null
 
 client:
@@ -50,7 +50,6 @@ sensors:
     # to be applied to all sensors
     image_size_x: 640
     image_size_y: 480
-    shutter_speed: 200
 
   lidar:
     range : 100.0
@@ -60,18 +59,4 @@ sensors:
     channels : 64.0
     rotation_frequency : 20.0
     points_per_second : 500000
-    sensor_tick: 0.1
-
-  # Let's experiment with different timesteps
-  rgb:
-    sensor_tick : 0.1
-
-  dvs:
-    sensor_tick : 0.1
-
-  optical_flow:
-    sensor_tick : 0.1
-
-  semantic_segmentation:
-    sensor_tick : 0.1
 

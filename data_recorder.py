@@ -2,6 +2,8 @@ import glob
 import os
 import sys
 
+import carla.libcarla
+
 try:
     sys.path.append(glob.glob('../CARLA_0.9.14/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
@@ -304,7 +306,8 @@ class DataRecorder():
                     lidar_bp.set_attribute(key, str(value))
 
                 lidar_transform = carla.Transform(sensors_location)
-                self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero)
+                self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero,
+                                                    attachment_type = carla.libcarla.AttachmentType.Rigid)
                 self.sensors.append(self.lidar)
 
                 self.lidar_point_list = o3d.geometry.PointCloud()
@@ -317,12 +320,13 @@ class DataRecorder():
                     if camera_bp.has_attribute(key):
                         camera_bp.set_attribute(key, str(value))
 
-                for key, value in sensor_settings[s_name].items():
-                    if camera_bp.has_attribute(key):
-                        camera_bp.set_attribute(key, str(value))
+                # for key, value in sensor_settings[s_name].items():
+                #     if camera_bp.has_attribute(key):
+                #         camera_bp.set_attribute(key, str(value))
 
                 camera_transform = carla.Transform(sensors_location)
-                camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to = self.hero)
+                camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to = self.hero,
+                                                attachment_type = carla.libcarla.AttachmentType.Rigid)
                 self.sensors.append(camera)
                 print(f'Created {camera.type_id}')
 
@@ -513,8 +517,8 @@ class DataRecorder():
         raw = np.frombuffer(flow.raw_data, dtype=np.float32)
         raw = raw.reshape((flow.height, flow.width, 2))
 
-        # Scale raw flow to the sensor's size
-        # and multiply the y component by -1 to get the forward flow (carla documentation)
+        # Flow values are in the range [-2,2] so it must be scaled
+        # we multiply the y component by -1 to get the forward flow (carla documentation)
         flow_uv = np.ndarray((flow.height, flow.width, 3))
         flow_uv[:,:,0] = raw[:,:,0] * 0.5
         flow_uv[:,:,1] = raw[:,:,1] * -0.5
@@ -624,15 +628,19 @@ class DataRecorder():
                 # print("\nWorld's frame: {}".format(w_frame))
 
                 # Wait for all data to be read and all callbacks to be executed using a queue.
-                # try:
-                #     for queue in self.sensor_queues.values():
-                #         s_frame = queue.get(True, 1.0)
-                # except Empty:
-                #     print("Some of the sensor information is missed")
+                try:
+                    for queue in self.sensor_queues.values():
+                        s_frame = queue.get(True, 1.0)
+                except Empty:
+                    print("Some of the sensor information is missed")
 
                 if time.time() > end_time:
                     break
             self.stop_recording()
+
+        except RuntimeError as err:
+            if "time-out" in str(err):
+                print(f"Time-out error encountred while recording {self.args['name']}")
 
         except KeyboardInterrupt:
             self.stop_recording()

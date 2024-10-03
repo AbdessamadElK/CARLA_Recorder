@@ -313,7 +313,7 @@ Scenario 18:
     cloudiness : 1.5
 
   car_lights_on : False
-  recording_duration : 15 #minutes
+  recording_duration : 2 #minutes
 
 
 ### TOWN_11_DAY
