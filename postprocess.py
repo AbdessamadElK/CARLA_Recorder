@@ -9,26 +9,31 @@ def process_sequence(input_path:Path, output_path:Path):
 
     rgb_dir = input_path / 'rgb'
 
-    # Remove the files that are present in some data directories and not in others
-    # mostly the first or the last frame
-    ref_dir = get_reference_dir(data_dirs)
-    for data_dir in data_dirs:
-        remove_extras(data_dir, ref_dir)
+    indices_to_include = sorted(get_indices_to_include(data_dirs))
 
-    for visual_dir in vis_dir.iterdir():
-        remove_extras(visual_dir, ref_dir)
+    events_dir = input_path / 'dvs'
 
-    # Assemble each two event streams in a single npz file
-    event_files = (data_dir/'dvs').glob("*.npy")
+
+    for i, idx in enumerate(indices_to_include):
+        if i == 0:
+            # skip the first frame (only used in events)
+            continue
+        
+
+
+        pass
     
 
 
     pass
 
-def get_reference_dir(data_dirs:list):
+def get_indices_to_include(data_dirs:list):
+    # Returns a list of frame numbers that are present in every data directory
     sorted_dirs = data_dirs.copy()
     sorted_dirs.sort(key=lambda dir : len(list(dir.iterdir())))
-    return sorted_dirs[0]
+    reference_dir = sorted_dirs[0]
+
+    return [int(file.stem) for file in reference_dir.iterdir()]
 
 
 def remove_extras(target_dir:Path, reference_dir:Path):
