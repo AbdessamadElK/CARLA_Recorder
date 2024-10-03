@@ -156,7 +156,7 @@ class DataRecorder():
         rand_seed = self.global_config["collector"]["random_seed"]
 
         save_dir_root = global_config["collector"]["save_dir"]
-        self.save_dir = save_dir_root / args["name"]
+        self.save_dir = Path(save_dir_root) / args["name"]
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
         self.duration = args["recording_duration"] * 60
@@ -613,6 +613,14 @@ class DataRecorder():
             while True:
                 self.world.tick()
                 w_frame = self.world.get_snapshot().frame
+
+                # Hero must not stop at traffic lights ;)
+                if self.hero.is_at_traffic_light():
+                    traffic_light = self.hero.get_traffic_light()
+                    if traffic_light.get_state() != carla.TrafficLightState.Green:
+                        traffic_light.set_state(carla.TrafficLightState.Green)
+                        traffic_light.set_green_time(4.0)
+
                 # print("\nWorld's frame: {}".format(w_frame))
 
                 # Wait for all data to be read and all callbacks to be executed using a queue.
@@ -633,11 +641,11 @@ class DataRecorder():
 
         finally:
             # Disable Synchronous mode and reactivate rendering
-            # settings = self.world.get_settings()
-            # settings.synchronous_mode = False
-            # settings.no_rendering_mode = False
-            # settings.fixed_delta_seconds = None
-            # self.world.apply_settings(settings)
+            settings = self.world.get_settings()
+            settings.synchronous_mode = False
+            settings.no_rendering_mode = False
+            settings.fixed_delta_seconds = None
+            self.world.apply_settings(settings)
 
             # Destroy vehicles
             print('\ndestroying %d sensors' % len(self.sensors))

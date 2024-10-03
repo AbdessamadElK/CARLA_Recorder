@@ -1,0 +1,77 @@
+collector:
+  save_dir : "C:/users/abdessamad/CARLA_DATA/Dataset0"
+  random_seed : null
+
+client:
+  host : 127.0.0.1
+  port : 2000
+  timeout : 10
+
+traffic_manager:
+  safe : False
+  tm_port : 8000
+  hybrid : False
+  respawn : False
+
+simulation:
+  time_step : 0.1
+  no_rendering : True
+  hero : "vehicle.audi.tt"
+  filterv : "vehicle.*"
+  generationv : all
+  filterw : "walker.pedestrian.*"
+  generationw : all
+
+sensors:
+  available :
+    - rgb
+    - optical_flow
+    - dvs
+    - semantic_segmentation
+    - lidar
+  
+  enable :
+    - rgb
+    - dvs
+    - optical_flow
+    - semantic_segmentation
+
+  visualize :
+    - optical_flow
+    - semantic_segmentation
+    - dvs
+  
+  location :
+    x : 1.0
+    y : 0.0
+    z : 1.5
+
+  settings_all:
+    # to be applied to all sensors
+    image_size_x: 640
+    image_size_y: 480
+    shutter_speed: 200
+
+  lidar:
+    range : 100.0
+    noise_stddev : 0.1
+    upper_fov : 15.0
+    lower_fov : -25.0
+    channels : 64.0
+    rotation_frequency : 20.0
+    points_per_second : 500000
+    sensor_tick: 0.1
+
+  # Let's experiment with different timesteps
+  rgb:
+    sensor_tick : 0.1
+
+  dvs:
+    sensor_tick : 0.1
+
+  optical_flow:
+    sensor_tick : 0.1
+
+  semantic_segmentation:
+    sensor_tick : 0.1
+

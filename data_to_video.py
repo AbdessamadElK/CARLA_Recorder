@@ -6,7 +6,7 @@ import skvideo.io as io
 import numpy as np
 from tqdm import tqdm
 
-DATA_SOURCE = Path("C:/usres/abdessamad/CARLA_DATA/Town_01_day")
+DATA_SOURCE = Path("C:/Users/Abdessamad/CARLA_DATA/Dataset0/town_01_day")
 
 VIS_DIR = DATA_SOURCE / 'visualizations'
 RGB_DIR = DATA_SOURCE / 'rgb'
@@ -16,7 +16,7 @@ visual_dirs.append(RGB_DIR)
 
 all_items = [sorted(dir.iterdir()) for dir in visual_dirs]
 
-writer = io.FFmpegWriter("./video30.mp4", outputdict={"-pix_fmt": "yuv420p"})
+writer = io.FFmpegWriter("./town_01_day.mp4", outputdict={"-pix_fmt": "yuv420p"})
 
 frame_numbers = [int(path.stem) for path in RGB_DIR.iterdir()]
 
