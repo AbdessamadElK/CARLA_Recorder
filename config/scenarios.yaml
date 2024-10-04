@@ -1,251 +1,251 @@
 ### TOWN_01_DAY
-# Scenario 1:
-#   name : town_01_day
-#   map : Town01
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
-#   weather :
-#     sun_azimuth_angle : 120.0
-#     sun_altitude_angle : 45.0
-#     cloudiness : 8.0
-#     # precipitation : 0.0
-#     # precipitation_deposits: 0.0
-#     # wind_intensity : 20.0
-#     # fog_density : 0.1
-#     # wetness : 0.0
-#     # fog_falloff : 0.0
-#     # scattering_intensity : 0.0
-#     # mie_scattering_scale : 0.0
-#     # rayleigh_scattering_scale : 0.0
-#     # dust_storm : 0.0
-#   car_lights_on : False
-#   recording_duration : 15 #minutes
+Scenario 1:
+  name : town_01_day
+  map : Town01
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
+  weather :
+    sun_azimuth_angle : 120.0
+    sun_altitude_angle : 45.0
+    cloudiness : 8.0
+    # precipitation : 0.0
+    # precipitation_deposits: 0.0
+    # wind_intensity : 20.0
+    # fog_density : 0.1
+    # wetness : 0.0
+    # fog_falloff : 0.0
+    # scattering_intensity : 0.0
+    # mie_scattering_scale : 0.0
+    # rayleigh_scattering_scale : 0.0
+    # dust_storm : 0.0
+  car_lights_on : False
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_01_EVENING
-# Scenario 2:
-#   name : town_01_evening
-#   map : Town01
-#   number_of_vehicles : 31
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_01_EVENING
+Scenario 2:
+  name : town_01_evening
+  map : Town01
+  number_of_vehicles : 31
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 135.0
-#     sun_altitude_angle : 12.0
-#     cloudiness : 9.0
+  weather :
+    sun_azimuth_angle : 135.0
+    sun_altitude_angle : 12.0
+    cloudiness : 9.0
 
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
-
-
-# ### TOWN_01_NIGHT
-# Scenario 3:
-#   name : town_01_night
-#   map : Town01
-#   number_of_vehicles : 30
-#   number_of_walkers : 8
-#   seed_walkers : 0
-
-#   weather :
-#     sun_azimuth_angle : 0.0
-#     sun_altitude_angle : -90.0
-#     cloudiness : 0.0
-
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_02_DAY
-# Scenario 4:
-#   name : town_02_day
-#   map : Town02
-#   number_of_vehicles : 20
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_01_NIGHT
+Scenario 3:
+  name : town_01_night
+  map : Town01
+  number_of_vehicles : 30
+  number_of_walkers : 8
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 100.0
-#     sun_altitude_angle : 41.0
-#     cloudiness : 5.0
+  weather :
+    sun_azimuth_angle : 0.0
+    sun_altitude_angle : -90.0
+    cloudiness : 0.0
 
-#   car_lights_on : False
-#   recording_duration : 15 #minutes
-
-
-# ### TOWN_02_EVENING
-# Scenario 5:
-#   name : town_02_evening
-#   map : Town02
-#   number_of_vehicles : 20
-#   number_of_walkers : 10
-#   seed_walkers : 0
-
-#   weather :
-#     sun_azimuth_angle : 95.0
-#     sun_altitude_angle : 11.0
-#     cloudiness : 5.0
-
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_02_NIGHT
-# Scenario 6:
-#   name : town_02_night
-#   map : Town02
-#   number_of_vehicles : 20
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_02_DAY
+Scenario 4:
+  name : town_02_day
+  map : Town02
+  number_of_vehicles : 20
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 0.0
-#     sun_altitude_angle : -90
-#     cloudiness : 0.0
+  weather :
+    sun_azimuth_angle : 100.0
+    sun_altitude_angle : 41.0
+    cloudiness : 5.0
 
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
-
-
-# ### TOWN_03_DAY
-# Scenario 7:
-#   name : town_03_day
-#   map : Town03
-#   number_of_vehicles : 35
-#   number_of_walkers : 10
-#   seed_walkers : 0
-
-#   weather :
-#     sun_azimuth_angle : 130.0
-#     sun_altitude_angle : 46.0
-#     cloudiness : 6.0
-
-#   car_lights_on : False
-#   recording_duration : 15 #minutes
+  car_lights_on : False
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_03_EVENING
-# Scenario 8:
-#   name : town_03_evening
-#   map : Town03
-#   number_of_vehicles : 32
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_02_EVENING
+Scenario 5:
+  name : town_02_evening
+  map : Town02
+  number_of_vehicles : 20
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 135.0
-#     sun_altitude_angle : 10.5
-#     cloudiness : 6.0
+  weather :
+    sun_azimuth_angle : 95.0
+    sun_altitude_angle : 11.0
+    cloudiness : 5.0
 
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
-
-
-# ### TOWN_03_NIGHT
-# Scenario 9:
-#   name : town_03_night
-#   map : Town03
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
-
-#   weather :
-#     sun_azimuth_angle : 0.0
-#     sun_altitude_angle : -90.0
-#     cloudiness : 0.0
-
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_04_DAY
-# Scenario 10:
-#   name : town_04_day
-#   map : Town04
-#   number_of_vehicles : 35
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_02_NIGHT
+Scenario 6:
+  name : town_02_night
+  map : Town02
+  number_of_vehicles : 20
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 110.0
-#     sun_altitude_angle : 45.0
-#     cloudiness : 8.0
-#     precipitation : 5.0
-#     precipitation_deposits: 1.0
+  weather :
+    sun_azimuth_angle : 0.0
+    sun_altitude_angle : -90
+    cloudiness : 0.0
 
-#   car_lights_on : False
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_04_EVENING
-# Scenario 11:
-#   name : town_04_evening
-#   map : Town04
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_03_DAY
+Scenario 7:
+  name : town_03_day
+  map : Town03
+  number_of_vehicles : 35
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 100.0
-#     sun_altitude_angle : 12.0
-#     cloudiness : 7.0
+  weather :
+    sun_azimuth_angle : 130.0
+    sun_altitude_angle : 46.0
+    cloudiness : 6.0
 
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
-
-
-# ### TOWN_04_NIGHT
-# Scenario 12:
-#   name : town_04_night
-#   map : Town04
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
-
-#   weather :
-#     sun_azimuth_angle : 0.0
-#     sun_altitude_angle : -90.0
-#     cloudiness : 0.0
-
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
+  car_lights_on : False
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_05_DAY
-# Scenario 13:
-#   name : town_05_day
-#   map : Town05
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_03_EVENING
+Scenario 8:
+  name : town_03_evening
+  map : Town03
+  number_of_vehicles : 32
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 110.0
-#     sun_altitude_angle : 47.0
-#     cloudiness : 2.0
-#     precipitation : 42.0
-#     precipitation_deposits: 25.0
+  weather :
+    sun_azimuth_angle : 135.0
+    sun_altitude_angle : 10.5
+    cloudiness : 6.0
 
-#   car_lights_on : False
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
-# ### TOWN_05_EVENING
-# Scenario 14:
-#   name : town_05_evening
-#   map : Town05
-#   number_of_vehicles : 30
-#   number_of_walkers : 10
-#   seed_walkers : 0
+### TOWN_03_NIGHT
+Scenario 9:
+  name : town_03_night
+  map : Town03
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
 
-#   weather :
-#     sun_azimuth_angle : 109.0
-#     sun_altitude_angle : 13.0
-#     cloudiness : 5.0
+  weather :
+    sun_azimuth_angle : 0.0
+    sun_altitude_angle : -90.0
+    cloudiness : 0.0
 
-#   car_lights_on : True
-#   recording_duration : 15 #minutes
+  car_lights_on : True
+  recording_duration : 15 #minutes
+
+
+### TOWN_04_DAY
+Scenario 10:
+  name : town_04_day
+  map : Town04
+  number_of_vehicles : 35
+  number_of_walkers : 10
+  seed_walkers : 0
+
+  weather :
+    sun_azimuth_angle : 110.0
+    sun_altitude_angle : 45.0
+    cloudiness : 8.0
+    precipitation : 5.0
+    precipitation_deposits: 1.0
+
+  car_lights_on : False
+  recording_duration : 15 #minutes
+
+
+### TOWN_04_EVENING
+Scenario 11:
+  name : town_04_evening
+  map : Town04
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
+
+  weather :
+    sun_azimuth_angle : 100.0
+    sun_altitude_angle : 12.0
+    cloudiness : 7.0
+
+  car_lights_on : True
+  recording_duration : 15 #minutes
+
+
+### TOWN_04_NIGHT
+Scenario 12:
+  name : town_04_night
+  map : Town04
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
+
+  weather :
+    sun_azimuth_angle : 0.0
+    sun_altitude_angle : -90.0
+    cloudiness : 0.0
+
+  car_lights_on : True
+  recording_duration : 15 #minutes
+
+
+### TOWN_05_DAY
+Scenario 13:
+  name : town_05_day
+  map : Town05
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
+
+  weather :
+    sun_azimuth_angle : 110.0
+    sun_altitude_angle : 47.0
+    cloudiness : 2.0
+    precipitation : 42.0
+    precipitation_deposits: 25.0
+
+  car_lights_on : False
+  recording_duration : 15 #minutes
+
+
+### TOWN_05_EVENING
+Scenario 14:
+  name : town_05_evening
+  map : Town05
+  number_of_vehicles : 30
+  number_of_walkers : 10
+  seed_walkers : 0
+
+  weather :
+    sun_azimuth_angle : 109.0
+    sun_altitude_angle : 13.0
+    cloudiness : 5.0
+
+  car_lights_on : True
+  recording_duration : 15 #minutes
 
 
 ### TOWN_05_NIGHT
@@ -333,18 +333,18 @@ Scenario 18:
 #   recording_duration : 15 #minutes
 
 
-### TOWN_12_DAY
-Scenario 20:
-  name : town_12_day
-  map : Town12
-  number_of_vehicles : 30
-  number_of_walkers : 10
-  seed_walkers : 0
+### TOWN_12_DAY (Always gives Time-Out error at start)
+# Scenario 20:
+#   name : town_12_day
+#   map : Town12
+#   number_of_vehicles : 30
+#   number_of_walkers : 10
+#   seed_walkers : 0
 
-  weather :
-    sun_azimuth_angle : 0.0
-    sun_altitude_angle : 42.0
-    cloudiness : 1.5
+#   weather :
+#     sun_azimuth_angle : 0.0
+#     sun_altitude_angle : 42.0
+#     cloudiness : 1.5
 
-  car_lights_on : False
-  recording_duration : 15 #minutes
+#   car_lights_on : False
+#   recording_duration : 15 #minutes

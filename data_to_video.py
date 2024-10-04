@@ -93,6 +93,6 @@ if __name__ == "__main__":
     generator = VideoDataGenerator(input, output)
 
     print(f"Generating videos from {input}")
-    # generator.generate()
-    generator.generate_superposed()
+    generator.generate()
+    # generator.generate_superposed()
     print(f"Done generating.. videos are saved in : {output}")

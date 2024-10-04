@@ -24,6 +24,7 @@ def process_sequence(input_path:Path, output_path:Path):
     data_dirs = [events_dir, flow_dir, rgb_dir, segmentation_dir]
 
     # Output directories
+    output_path = output_path / input_path.name
     output_path.mkdir(parents=True, exist_ok=True)
     
     rgb_destination = output_path / 'images'
@@ -38,20 +39,23 @@ def process_sequence(input_path:Path, output_path:Path):
         if i == 0:
             # skip the first frame (only used in events)
             continue
+        try:
+            # Save each two consecutive event streams in one file
+            events0 = np.load(events_dir / "{}.npy".format(idx-1))
+            events1 = np.load(events_dir / "{}.npy".format(idx))
+            np.savez(output_path / "{:06d}".format(i-1), events_prev = events0, events_curr = events1)
+
+            # Save flow files
+            flow_16bit = imageio.imread(flow_dir / f"{idx}.png", format='PNG-FI')
+            np.save(output_path / 'flow_{:06d}.npy'.format(i-1), flow_16bit)
+
+            # Copy the rest of data
+            shutil.copy(rgb_dir / "{}.png".format(idx), rgb_destination / "{:06d}.png".format(i-1))
+            shutil.copy(segmentation_dir / "{}.png".format(idx), seg_destination / "{:06d}.png".format(i-1))
         
-        # Save each two consecutive event streams in one file
-        events0 = np.load(events_dir / "{}.npy".format(idx-1))
-        events1 = np.load(events_dir / "{}.npy".format(idx))
-        np.savez(output_path / "{:06d}".format(i-1), events_prev = events0, events_curr = events1)
-
-        # Save flow files
-        flow_16bit = imageio.imread(flow_dir / f"{idx}.png", format='PNG-FI')
-        np.save(output_path / 'flow_{:06d}.npy'.format(i-1), flow_16bit)
-
-        # Copy the rest of data
-        shutil.copy(rgb_dir / "{}.png".format(idx), rgb_destination / "{:06d}.png".format(i))
-        shutil.copy(segmentation_dir / "{}.png".format(idx), seg_destination / "{:06d}.png".format(i))
-
+        except FileNotFoundError:
+            print(f"Missing file : {idx}")
+            continue
 
 def process_dataset(source:Path, output_path:Path):
     print("Post processing the dataset {}...".format(source.name))
