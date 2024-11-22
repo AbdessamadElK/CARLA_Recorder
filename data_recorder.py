@@ -5,7 +5,7 @@ import sys
 import carla.libcarla
 
 try:
-    sys.path.append(glob.glob('../CARLA_0.9.14/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('/home/abdou/CARLA_0.9.15/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
