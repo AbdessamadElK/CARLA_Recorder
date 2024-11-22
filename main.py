@@ -24,7 +24,7 @@ SCENARIOS_CONFIG = "./config/scenarios.yaml"
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", "-s", type=int, help="The desired scenario's id (see scenarios.yaml for defined scenarios)")
+    parser.add_argument("--scenario", "-s", type=int, default="", help="The desired scenario's id (see scenarios.yaml for defined scenarios)")
     args = parser.parse_args()
 
 
@@ -34,7 +34,9 @@ if __name__ == "__main__":
     with open(SCENARIOS_CONFIG) as scenarios_cfg:
         scenarios = yaml.safe_load(scenarios_cfg)
 
-    collector = DataCollector(global_config, scenarios)
-    collector.collect()
+    if args.scenario == "":
+        collector = DataCollector(global_config, scenarios)
+        collector.collect()
+    else:
+        record_scenario(args.scenario, global_config, scenarios)
 
-    # record_scenario(args.scenario, global_config, scenarios)

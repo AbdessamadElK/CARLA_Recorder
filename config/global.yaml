@@ -1,6 +1,6 @@
 collector:
-  save_dir : "C:/users/abdessamad/CARLA_DATA/DATASET1"
-  random_seed : null
+  save_dir : "C:/users/abdessamad/CARLA_DATA/"
+  random_seed : 19990415
 
 client:
   host : 127.0.0.1
@@ -14,7 +14,8 @@ traffic_manager:
   respawn : False
 
 simulation:
-  time_step : 0.1
+  synchronous : True
+  time_step : 0.001
   no_rendering : True
   hero : "vehicle.audi.tt"
   filterv : "vehicle.*"
@@ -23,23 +24,17 @@ simulation:
   generationw : all
 
 sensors:
-  available :
-    - rgb
-    - optical_flow
-    - dvs
-    - semantic_segmentation
-    - lidar
-  
+  # Options :
+  # - rgb
+  # - optical_flow
+  # - dvs
+  # - semantic_segmentation
+  # - lidar
+
   enable :
     - rgb
-    - dvs
-    - optical_flow
-    - semantic_segmentation
 
-  visualize :
-    - optical_flow
-    - semantic_segmentation
-    - dvs
+  visualize : []
   
   location :
     x : 1.0
@@ -54,9 +49,21 @@ sensors:
   lidar:
     range : 100.0
     noise_stddev : 0.1
-    upper_fov : 15.0
-    lower_fov : -25.0
-    channels : 64.0
+    upper_fov : 20.0
+    lower_fov : -20.0
+    channels : 16.0
     rotation_frequency : 20.0
-    points_per_second : 500000
+    points_per_second : 300000
 
+  rgb:
+    sensor_tick : 0.001
+    image_size_x: 640
+    image_size_y: 480
+
+  dvs:
+    image_size_x : 640
+    image_size_y : 480
+    refractory_period_ns : 100000000
+
+  optical_flow:
+    sensor_tick: 0.1

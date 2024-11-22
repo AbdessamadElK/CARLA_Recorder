@@ -34,6 +34,7 @@ from matplotlib import cm
 from matplotlib import colors
 
 from functools import partial
+import weakref
 
 def visualize_optical_flow(flow, return_image=False, text=None, scaling=None):
     # flow -> numpy array 2 x height x width
@@ -88,37 +89,6 @@ def get_actor_blueprints(world, filter, generation):
     except:
         print("   Warning! Actor Generation is not valid. No actor will be spawned.")
         return []
-
-# Helpful constants for LIDAR visualization
-VIRIDIS = np.array(cm.get_cmap('plasma').colors)
-VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
-COOL_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
-COOL = np.array(cm.get_cmap('winter')(COOL_RANGE))
-COOL = COOL[:,:3]
-
-def add_open3d_axis(vis):
-    """Add a small 3D axis on Open3D visualizer"""
-    axis = o3d.geometry.LineSet()
-    axis.points = o3d.utility.Vector3dVector(np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0]
-    ]))
-
-    axis.lines = o3d.utility.Vector2iVector(np.array([
-        [0, 1],
-        [0, 2],
-        [0, 3]
-    ]))
-
-    axis.colors = o3d.utility.Vector3dVector(np.array([
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0]
-    ]))
-
-    vis.add_geometry(axis)
 
 class DataCollector():
     # The data collector must connect with CARLA, retreive the world and pass everything to each DataRecorder
@@ -194,11 +164,12 @@ class DataRecorder():
         random.seed(rand_seed if rand_seed is not None else int(time.time()))
 
         # Activate synchronous mode with a fixed time step
-        self.synchronous_master = False
         settings = self.world.get_settings()
-        self.traffic_manager.set_synchronous_mode(True)
-        settings.synchronous_mode = True
-        settings.fixed_delta_seconds = global_config["simulation"]["time_step"]
+        if global_config["simulation"]["synchronous"]:
+            self.synchronous_master = True
+            self.traffic_manager.set_synchronous_mode(True)
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = global_config["simulation"]["time_step"]
 
         # Rendering
         if global_config["simulation"]["no_rendering"]:
@@ -250,28 +221,24 @@ class DataRecorder():
 
         # TODO : make the sensor settings part of the global configuration
 
-        self.sensors = []
         sensors_seetings = global_config["sensors"]
-        self.available_sensors = sensors_seetings["available"]
-        self.visualizable_sensors = ['optical_flow', 'semantic_segmentation', 'dvs']
-        self.visualize = {key : (key in sensors_seetings["visualize"]) for key in self.available_sensors}
+        enabled_sensors = sensors_seetings["enable"]
+        self.visualize = sensors_seetings["visualize"]
 
         # self.visualize = {'optical_flow':True,
         #                   'semantic_segmentation':True,
         #                   'dvs':True}
         
-        enabled_sensors = sensors_seetings["enable"]
-        if enabled_sensors == 'all':
-            self.sensor_names = self.available_sensors
-            self.lidar = True       # Will be replaced by the lidar object after spawning
-        else:
-            assert type(enabled_sensors) == list
-            self.lidar = 'lidar' in enabled_sensors             
-            self.sensor_names = enabled_sensors
+        self.lidar = 'lidar' in enabled_sensors             
+        self.sensors = {key : None for key in enabled_sensors}
+        self.sensors_bp = {key : None for key in enabled_sensors}
+        self.sensor_queues = {key:queue.Queue() for key in enabled_sensors}
 
-        self.sensor_queues = {key:queue.Queue() for key in self.sensor_names}
+        self.sensor_names = enabled_sensors
         self.spawn_sensors()
 
+        self.first_frame = None
+        self.rgb_timestamps = []
 
         # Events cumulator (under test)
         self.events_cumulator = {'t' : [], 'x' : [], 'y' : [], 'pol' : []}
@@ -286,7 +253,7 @@ class DataRecorder():
             dir.mkdir(parents=True, exist_ok=True)
 
         # Visualization dirs
-        self.visual_dirs = {key: self.save_dir / 'visualizations' / key for key in self.sensor_names if self.visualize[key]}
+        self.visual_dirs = {key: self.save_dir / 'visualizations' / key for key in self.sensor_names if (key in self.visualize)}
         for dir in self.visual_dirs.values():
             dir.mkdir(parents=True, exist_ok=True)
         
@@ -308,7 +275,8 @@ class DataRecorder():
                 lidar_transform = carla.Transform(sensors_location)
                 self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero,
                                                     attachment_type = carla.libcarla.AttachmentType.Rigid)
-                self.sensors.append(self.lidar)
+                self.sensors[s_name] = self.lidar
+                self.sensors_bp[s_name] = self.lidar_bp
 
                 self.lidar_point_list = o3d.geometry.PointCloud()
                 print(f'Created {self.lidar.type_id}')
@@ -316,18 +284,22 @@ class DataRecorder():
                 # Create camera
                 camera_bp = self.world.get_blueprint_library().find(f"sensor.camera.{s_name}")
                 
-                for key, value in sensor_global_settings.items():
-                    if camera_bp.has_attribute(key):
-                        camera_bp.set_attribute(key, str(value))
-
-                # for key, value in sensor_settings[s_name].items():
+                # for key, value in sensor_global_settings.items():
                 #     if camera_bp.has_attribute(key):
                 #         camera_bp.set_attribute(key, str(value))
+
+                if s_name in sensor_settings:
+                    for key, value in sensor_settings[s_name].items():
+                        # if camera_bp.has_attribute(key):
+                        camera_bp.set_attribute(key, str(value))
 
                 camera_transform = carla.Transform(sensors_location)
                 camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to = self.hero,
                                                 attachment_type = carla.libcarla.AttachmentType.Rigid)
-                self.sensors.append(camera)
+                
+                self.sensors[s_name] = camera
+                self.sensors_bp[s_name] = camera_bp
+
                 print(f'Created {camera.type_id}')
 
     
@@ -455,158 +427,202 @@ class DataRecorder():
 
 
     def start_recording(self):
-        for sensor in self.sensors:
-            # configure sensors so that they put their data to the corresponding queue
+        for sensor in self.sensors.values():
+            # Start all sensors
             sensor.listen(self.get_callback(sensor.type_id))
 
     def stop_recording(self):
-        for sensor in self.sensors:
+        # Stop all sensors
+        for sensor in self.sensors.values():
             sensor.stop()
 
+    def get_relative_frame(self, frame):
+        if self.first_frame is None:
+            return 0
+        
+        return frame - self.first_frame
+
     def get_callback(self, type_id):
+        weak_self = weakref.ref(self)
+
         if "rgb" in type_id:
-            return partial(self.rgb_callback,
-                           save_dir = self.data_save_dirs["rgb"],
-                           sensor_queue = self.sensor_queues["rgb"])
+            return partial(self.rgb_callback, weak_self = weak_self, sensor = "rgb")
 
         elif "semantic_segmentation" in type_id:
-            return partial(self.segmentation_callback,
-                           save_dir = self.data_save_dirs["semantic_segmentation"],
-                           vis_dir = self.visual_dirs["semantic_segmentation"],
-                           sensor_queue = self.sensor_queues["semantic_segmentation"])
+            return partial(self.segmentation_callback, weak_self = weak_self, sensor = "semantic_segmentation")
 
         elif "flow" in type_id:
-            return partial(self.flow_callback,
-                           save_dir = self.data_save_dirs["optical_flow"],
-                           vis_dir = self.visual_dirs["optical_flow"],
-                           sensor_queue = self.sensor_queues["optical_flow"])
-
+            return partial(self.flow_callback, weak_self = weak_self, sensor = "optical_flow")
+        
         elif "dvs" in type_id:
-            return partial(self.dvs_callback,
-                           save_dir = self.data_save_dirs["dvs"],
-                           vis_dir = self.visual_dirs["dvs"],
-                           cumulator = self.events_cumulator,
-                           sensor_queue = self.sensor_queues["dvs"])
+            return partial(self.dvs_callback, weak_self = weak_self, sensor = "dvs")
         
         elif "lidar" in type_id :
-            return partial(self.lidar_callback,
-                           point_list = self.lidar_point_list,
-                           save_dir = self.data_save_dirs["lidar"],
-                           vis_dir = None,
-                           sensor_queue = self.sensor_queues["lidar"])
+            return partial(self.lidar_callback, weak_self = weak_self, sensor = "lidar")
         else:
             raise NotImplementedError
         
     
     @staticmethod
-    def rgb_callback(image, save_dir, sensor_queue):
-        # print("Recorded Frame {}".format(image.frame))
-        image.save_to_disk(str(save_dir / f'{image.frame}.png'))
-        sensor_queue.put((image.frame, 'rgb_camera'))
+    def rgb_callback(image, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+        
+        frame = self.get_relative_frame(image.frame)
+        frame_file_name = '{:06d}.png'.format(frame)
+        image.save_to_disk(str(save_dir / frame_file_name))
+
+        sensor_queue.put((frame, 'rgb_camera'))
+
 
     @staticmethod
-    def segmentation_callback(segmentation, save_dir, sensor_queue, vis_dir = None):
-        segmentation.save_to_disk(str(save_dir / f'{segmentation.frame}.png'))
-        if vis_dir is not None:
-            segmentation.save_to_disk(str(vis_dir / f'{segmentation.frame}.png'), carla.ColorConverter.CityScapesPalette)
-        sensor_queue.put((segmentation.frame, 'segmentation_camera'))
+    def segmentation_callback(segmentation, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+
+        frame = self.get_relative_frame(segmentation.frame)
+        frame_file_name = '{:06d}.png'.format(frame)
+        segmentation.save_to_disk(str(save_dir / frame_file_name))
+
+        if sensor in self.visualize:
+            vis_dir = self.visual_dirs[sensor]
+            segmentation.save_to_disk(str(vis_dir / frame_file_name), carla.ColorConverter.CityScapesPalette)
+
+        sensor_queue.put((frame, 'segmentation_camera'))
 
 
     @staticmethod
-    def flow_callback(flow, save_dir, sensor_queue, vis_dir = None):
+    def flow_callback(flow, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+
+        frame = self.get_relative_frame(flow.frame)
+        frame_file_name = '{:06d}.png'.format(frame)
+
         raw = np.frombuffer(flow.raw_data, dtype=np.float32)
+
+        # print(np.min(raw), np.max(raw), np.mean(raw))
+
         raw = raw.reshape((flow.height, flow.width, 2))
 
         # Flow values are in the range [-2,2] so it must be scaled
         # we multiply the y component by -1 to get the forward flow (carla documentation)
         flow_uv = np.ndarray((flow.height, flow.width, 3))
-        flow_uv[:,:,0] = raw[:,:,0] * 0.5
-        flow_uv[:,:,1] = raw[:,:,1] * -0.5
+        flow_uv[:,:,0] = raw[:,:,0] * 128.0
+        flow_uv[:,:,1] = raw[:,:,1] * -128.0
 
         # Visualize
-        if vis_dir is not None:
+        if sensor in self.visualize:
+            vis_dir = self.visual_dirs[sensor]
             # rgb, _ = visualize_optical_flow(flow_uv[:,:,:2])
             # rgb *= 255
             # imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), rgb.astype('uint8'))
             vis = flow_uv_to_colors(u = flow_uv[:,:,0], v = flow_uv[:,:,1])
-            imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), vis.astype('uint8'))
+            imageio.imwrite(str(vis_dir / frame_file_name), vis.astype('uint8'))
 
         # Save flow
         flow_uv = flow_uv * 128.0 + 2**15 
         flow_uv[:,:,2] = 1
-        imageio.imwrite(str(save_dir / f'{flow.frame}.png'), flow_uv.astype(np.uint16), format='PNG-FI')
+        imageio.imwrite(str(save_dir / frame_file_name), flow_uv.astype(np.uint16), format='PNG-FI')
 
-        sensor_queue.put((flow.frame, 'optical_flow_camera'))
+        sensor_queue.put((frame, 'optical_flow_camera'))
 
 
     @staticmethod
-    def dvs_callback(events, save_dir, sensor_queue, cumulator, vis_dir = None):
+    def dvs_callback(events, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+
+        frame = self.get_relative_frame(events.frame)
+        events_file_name = '{:06d}.npy'.format(frame)
+
         dvs_events = np.frombuffer(events.raw_data, dtype=np.dtype([
             ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', bool)]))
         
-        # Try cumulating events from multiple short time windows
-        # for key in cumulator:
-        #     cumulator[key].append(dvs_events[:][key].copy())
+        # Cumulate events
+        for key in self.events_cumulator:
+            self.events_cumulator[key].append(dvs_events[:][key].copy())
+        
+        if len(self.events_cumulator['x']) >= 100:
+            x = np.concatenate(self.events_cumulator['x'])
+            y = np.concatenate(self.events_cumulator['y'])
+            t = np.concatenate(self.events_cumulator['t'])
+            p = np.concatenate(self.events_cumulator['pol']).astype(int)
 
-        # if len(cumulator['x']) >= 100:
-        #     # print(np.shape(cumulator['x'][0]))
-        #     # print(np.shape(cumulator['x'][1]))
-        #     x = np.concatenate(cumulator['x'], dtype=np.uint16)
-        #     y = np.concatenate(cumulator['y'], dtype=np.uint16)
-        #     t = np.concatenate(cumulator['t'], dtype=np.int64)
-        #     pol = np.concatenate(cumulator['pol'], dtype=bool)
+            if sensor in self.visualize:
+                vis_dir = self.visual_dirs[sensor]
+                dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
+                dvs_image[y[:], x[:], p[:] * 2] = 255
+                imageio.imwrite(str(vis_dir / '{:06d}.png'.format(frame)), dvs_image)
 
-        #     # print(np.min(x), np.max(x), np.mean(x), sep="\t")
+            for key in self.events_cumulator:
+                self.events_cumulator[key] = []
 
-        #     if vis_dir is not None:
-        #         dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
-        #         dvs_image[y[:], x[:], pol[:] * 2] = 255
-        #         imageio.imwrite(str(vis_dir / f'{events.frame}.png'), dvs_image)
+        sensor_queue.put((frame, 'dvs_camera'))
 
-        #     for key in cumulator:
-        #         cumulator[key] = []
+        return
         
         # Save events
-
         x = dvs_events[:]['x']
         y = dvs_events[:]['y']
         t = dvs_events[:]['t']
         p = dvs_events[:]['pol'].astype(int)
 
         events_stream = np.stack([x, y, t, p], axis=1)
-        np.save(str(save_dir / f'{events.frame-1}.npy'), events_stream)
+        np.save(str(save_dir / events_file_name), events_stream)
+
         
         # Visualize events
-        if vis_dir is not None:
+        if sensor in self.visualize:
+            vis_dir = self.visual_dirs[sensor]
             dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
             dvs_image[dvs_events[:]['y'], dvs_events[:]['x'], dvs_events[:]['pol'] * 2] = 255
-            imageio.imwrite(str(vis_dir / f'{events.frame-1}.png'), dvs_image)
+            imageio.imwrite(str(vis_dir / '{:06d}.png'.format(frame)), dvs_image)
 
-        sensor_queue.put((events.frame, 'dvs_camera'))
+        
+        # TODO : Append trajectory point (location, velocity, acceleration)
+        #        and save the whole trajectory at the end of the recording
+
+
 
     @staticmethod
-    def lidar_callback(point_cloud, point_list, save_dir, sensor_queue, vis_dir = None):
+    def lidar_callback(point_cloud, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+        point_list = self.lidar_point_list
+
+        frame = self.get_relative_frame(point_cloud.frame)
+
         # Save Point Cloud file
-        point_cloud.save_to_disk(str(save_dir / f'{point_cloud.frame}.ply'))
+        point_cloud.save_to_disk(str(save_dir / '{:06d}.ply'.format(frame)))
 
-        sensor_queue.put((point_cloud.frame, 'lidar'))
+        sensor_queue.put((frame, 'lidar'))
         return
-        data = np.copy(np.frombuffer(point_cloud.raw_data, dtype=np.dtype('f4')))
-        data = np.reshape(data, (int(data.shape[0] / 4), 4)) # x, y, z, dist_from_sensor
-
-        # Isolate the intensity and compute color for it
-        intensity = data[:, -1]
-        intensity_col = 1.0 - np.log(intensity) / np.log(np.exp(-0.004 * 100))
-        int_color = np.c_[
-            np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 0]),
-            np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 1]),
-            np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 2])]
         
-        points = data[:, :-1]
-        points[:, :1] = -points[:, :1]
+        if sensor in self.visualize:
+            vis_dir = self.visual_dirs[sensor]
 
-        point_list.points = o3d.utility.Vector3dVector(points)
-        point_list.colors = o3d.utility.Vector3dVector(int_color)
+            data = np.copy(np.frombuffer(point_cloud.raw_data, dtype=np.dtype('f4')))
+            data = np.reshape(data, (int(data.shape[0] / 4), 4)) # x, y, z, dist_from_sensor
+
+            # Isolate the intensity and compute color for it
+            intensity = data[:, -1]
+            intensity_col = 1.0 - np.log(intensity) / np.log(np.exp(-0.004 * 100))
+            int_color = np.c_[
+                np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 0]),
+                np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 1]),
+                np.interp(intensity_col, VID_RANGE, VIRIDIS[:, 2])]
+            
+            points = data[:, :-1]
+            points[:, :1] = -points[:, :1]
+
+            point_list.points = o3d.utility.Vector3dVector(points)
+            point_list.colors = o3d.utility.Vector3dVector(int_color)
 
 
     def record(self):
@@ -614,25 +630,26 @@ class DataRecorder():
             print(f"Recording {self.args['name']} [Duration : {self.duration} seconds] ... press ctl+c to force exit")
             end_time = time.time() + self.duration
             self.start_recording()
+            first = True
             while True:
-                self.world.tick()
-                w_frame = self.world.get_snapshot().frame
+                if self.global_config["simulation"]["synchronous"]:
+                    self.world.tick()
+                    w_frame = self.world.get_snapshot().frame
+                    # print("\nWorld's frame: {}".format(w_frame))
 
-                # Hero must not stop at traffic lights ;)
-                if self.hero.is_at_traffic_light():
-                    traffic_light = self.hero.get_traffic_light()
-                    if traffic_light.get_state() != carla.TrafficLightState.Green:
-                        traffic_light.set_state(carla.TrafficLightState.Green)
-                        traffic_light.set_green_time(4.0)
+                    if first:
+                        # Save the first frame so the numbering can start from 0
+                        self.first_frame = w_frame
+                        first = False
 
-                # print("\nWorld's frame: {}".format(w_frame))
-
-                # Wait for all data to be read and all callbacks to be executed using a queue.
-                try:
-                    for queue in self.sensor_queues.values():
-                        s_frame = queue.get(True, 1.0)
-                except Empty:
-                    print("Some of the sensor information is missed")
+                    # Wait for all data to be written to disk.
+                    # try:
+                    #     for queue in self.sensor_queues.values():
+                    #         s_frame = queue.get(True, 1.0)
+                    # except Empty:
+                    #     print("Some of the sensor information is missed")
+                else:
+                    self.world.wait_for_tick()
 
                 if time.time() > end_time:
                     break
@@ -657,7 +674,7 @@ class DataRecorder():
 
             # Destroy vehicles
             print('\ndestroying %d sensors' % len(self.sensors))
-            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensors])
+            self.client.apply_batch([carla.command.DestroyActor(x) for x in self.sensors.values()])
 
             # Destroy vehicles
             print('\ndestroying %d vehicles' % len(self.vehicles_list))
