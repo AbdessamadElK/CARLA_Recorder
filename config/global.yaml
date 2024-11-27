@@ -1,6 +1,6 @@
 collector:
-  save_dir : "C:/users/abdessamad/CARLA_DATA/"
-  random_seed : 19990415
+  save_dir : "/home/abdou/carla_record_test"
+  random_seed : null
 
 client:
   host : 127.0.0.1

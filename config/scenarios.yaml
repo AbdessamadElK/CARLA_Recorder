@@ -20,7 +20,7 @@ Scenario 1:
     # rayleigh_scattering_scale : 0.0
     # dust_storm : 0.0
   car_lights_on : False
-  recording_duration : 20 #minutes
+  recording_duration : 15 #minutes
 
 
 ### TOWN_01_EVENING
