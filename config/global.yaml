@@ -1,5 +1,5 @@
 collector:
-  save_dir : "/home/abdou/carla_record_test"
+  save_dir : "C:/users/abdessamad/CARLA_DATA/DATASET1"
   random_seed : null
 
 client:
