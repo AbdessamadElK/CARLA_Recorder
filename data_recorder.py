@@ -93,9 +93,10 @@ def get_actor_blueprints(world, filter, generation):
 class DataCollector():
     # The data collector must connect with CARLA, retreive the world and pass everything to each DataRecorder
     # A separate data recorder is used for each Scenario to record a sequence
-    def __init__(self, global_config, scenarios):
+    def __init__(self, global_config, sensors_config, scenarios):
         # config
         self.config = global_config
+        self.sensors_config = sensors_config
         self.scenarios = scenarios
 
         # save_dir
@@ -110,21 +111,23 @@ class DataCollector():
     def collect(self):
         # Get maps
         for scenario_args in self.scenarios.values():
-            recorder = DataRecorder(scenario_args, self.config)
+            recorder = DataRecorder(scenario_args, self.config, self.sensors_config)
             recorder.record()
 
-def record_scenario(scenario_id:int, global_config, scenarios):
+def record_scenario(scenario_id:int, global_config, sensors_config, scenarios):
     scenario_name = f"Scenario {scenario_id}"
     assert scenario_name in scenarios
 
-    recorder = DataRecorder(scenarios[scenario_name], global_config)
+    recorder = DataRecorder(scenarios[scenario_name], global_config, sensors_config)
     recorder.record()
     time.sleep(1)
 
 class DataRecorder():
-    def __init__(self, args, global_config):     
+    def __init__(self, args, global_config, sensors_config):     
         self.args = args
         self.global_config = global_config
+        self.sensors_config = sensors_config
+
         rand_seed = self.global_config["collector"]["random_seed"]
 
         save_dir_root = global_config["collector"]["save_dir"]
@@ -218,23 +221,25 @@ class DataRecorder():
 
         # Sensors
         # available_sensors = []
-
-        # TODO : make the sensor settings part of the global configuration
-
-        sensors_seetings = global_config["sensors"]
-        enabled_sensors = sensors_seetings["enable"]
-        self.visualize = sensors_seetings["visualize"]
+        # sensors_seetings = global_config["sensors"]
+        # enabled_sensors = sensors_seetings["enable"]
+        # self.visualize = sensors_seetings["visualize"]
 
         # self.visualize = {'optical_flow':True,
         #                   'semantic_segmentation':True,
         #                   'dvs':True}
         
-        self.lidar = 'lidar' in enabled_sensors             
-        self.sensors = {key : None for key in enabled_sensors}
-        self.sensors_bp = {key : None for key in enabled_sensors}
-        self.sensor_queues = {key:queue.Queue() for key in enabled_sensors}
+        # self.lidar = 'lidar' in enabled_sensors             
+        # self.sensors = {key : None for key in enabled_sensors}
+        # self.sensors_bp = {key : None for key in enabled_sensors}
+        # self.sensor_queues = {key:queue.Queue() for key in enabled_sensors}
 
-        self.sensor_names = enabled_sensors
+        # self.sensor_names = enabled_sensors
+        self.sensors = {}
+        self.sensors_bp = {}
+        self.data_save_dirs = {}
+        self.visual_dirs = {}
+        self.sensor_queues = {}
         self.spawn_sensors()
 
         self.first_frame = None
@@ -243,64 +248,65 @@ class DataRecorder():
         # Events cumulator (under test)
         self.events_cumulator = {'t' : [], 'x' : [], 'y' : [], 'pol' : []}
 
+        self.rgb_count = 0
+        self.start_time = None
         return
         
     def spawn_sensors(self):
 
-        # Save dirs
-        self.data_save_dirs = {key: self.save_dir / key for key in self.sensor_names}
-        for dir in self.data_save_dirs.values():
-            dir.mkdir(parents=True, exist_ok=True)
-
-        # Visualization dirs
-        self.visual_dirs = {key: self.save_dir / 'visualizations' / key for key in self.sensor_names if (key in self.visualize)}
-        for dir in self.visual_dirs.values():
-            dir.mkdir(parents=True, exist_ok=True)
-        
-        # TODO : Make settings part of the global configuration
-        sensor_settings = self.global_config["sensors"]
-        sensor_global_settings = sensor_settings["settings_all"]
-
-        if self.lidar:
-            lidar_settings = self.global_config["sensors"]["lidar"]
-
+        # if self.lidar:
+        #     lidar_settings = self.global_config["sensors"]["lidar"]
         sensors_location = carla.Location(**self.global_config["sensors"]["location"])
-        for s_name in self.sensor_names:
-            if  s_name == "lidar" and self.lidar:
-                # Create Lidar
-                lidar_bp = self.world.get_blueprint_library().find("sensor.lidar.ray_cast")
-                for key, value in lidar_settings.items():
-                    lidar_bp.set_attribute(key, str(value))
 
-                lidar_transform = carla.Transform(sensors_location)
-                self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero,
-                                                    attachment_type = carla.libcarla.AttachmentType.Rigid)
-                self.sensors[s_name] = self.lidar
-                self.sensors_bp[s_name] = self.lidar_bp
+        for s_name, conf in self.sensors_config.items():
+            if not conf['enable']:
+                continue
+            sensor_bp = self.world.get_blueprint_library().find(conf['blueprint_name'])
+            for key, value in conf['settings'].items():
+                sensor_bp.set_attribute(key, str(value))
 
-                self.lidar_point_list = o3d.geometry.PointCloud()
-                print(f'Created {self.lidar.type_id}')
+            camera_transform = carla.Transform(sensors_location)
+            sensor = self.world.spawn_actor(sensor_bp, camera_transform, attach_to = self.hero,
+                                            attachment_type = carla.libcarla.AttachmentType.Rigid)
+            
+            self.sensors[s_name] = sensor
+            self.sensors_bp[s_name] = sensor_bp
+
+            self.data_save_dirs[s_name] = self.save_dir / s_name
+
+            if conf['visualize']:
+                self.visual_dirs[s_name] = self.save_dir / 'visualizations' / s_name
             else:
-                # Create camera
-                camera_bp = self.world.get_blueprint_library().find(f"sensor.camera.{s_name}")
-                
-                # for key, value in sensor_global_settings.items():
-                #     if camera_bp.has_attribute(key):
-                #         camera_bp.set_attribute(key, str(value))
+                self.visual_dirs[s_name] = None
 
-                if s_name in sensor_settings:
-                    for key, value in sensor_settings[s_name].items():
-                        # if camera_bp.has_attribute(key):
-                        camera_bp.set_attribute(key, str(value))
+            self.sensor_queues[s_name] = queue.Queue()
 
-                camera_transform = carla.Transform(sensors_location)
-                camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to = self.hero,
-                                                attachment_type = carla.libcarla.AttachmentType.Rigid)
-                
-                self.sensors[s_name] = camera
-                self.sensors_bp[s_name] = camera_bp
+            print(f'Created {s_name} of type : {sensor.type_id}')
 
-                print(f'Created {camera.type_id}')
+
+        for dir in self.data_save_dirs.values():
+            if dir is not None:
+                dir.mkdir(parents=True, exist_ok=True)
+
+        for dir in self.visual_dirs.values():
+            if dir is not None:
+                dir.mkdir(parents=True, exist_ok=True)
+        
+        # for s_name in self.sensor_names:
+        #     if  s_name == "lidar" and self.lidar:
+        #         # Create Lidar
+        #         lidar_bp = self.world.get_blueprint_library().find("sensor.lidar.ray_cast")
+        #         for key, value in lidar_settings.items():
+        #             lidar_bp.set_attribute(key, str(value))
+
+        #         lidar_transform = carla.Transform(sensors_location)
+        #         self.lidar = self.world.spawn_actor(lidar_bp, lidar_transform, attach_to = self.hero,
+        #                                             attachment_type = carla.libcarla.AttachmentType.Rigid)
+        #         self.sensors[s_name] = self.lidar
+        #         self.sensors_bp[s_name] = self.lidar_bp
+
+        #         self.lidar_point_list = o3d.geometry.PointCloud()
+        #         print(f'Created {self.lidar.type_id}')
 
     
     def spawn_vehicles(self):
@@ -427,9 +433,9 @@ class DataRecorder():
 
 
     def start_recording(self):
-        for sensor in self.sensors.values():
+        for s_name, sensor in self.sensors.items():
             # Start all sensors
-            sensor.listen(self.get_callback(sensor.type_id))
+            sensor.listen(self.get_callback(s_name))
 
     def stop_recording(self):
         # Stop all sensors
@@ -442,23 +448,26 @@ class DataRecorder():
         
         return frame - self.first_frame
 
-    def get_callback(self, type_id):
+    def get_callback(self, s_name):
         weak_self = weakref.ref(self)
 
-        if "rgb" in type_id:
-            return partial(self.rgb_callback, weak_self = weak_self, sensor = "rgb")
-
-        elif "semantic_segmentation" in type_id:
-            return partial(self.segmentation_callback, weak_self = weak_self, sensor = "semantic_segmentation")
-
-        elif "flow" in type_id:
-            return partial(self.flow_callback, weak_self = weak_self, sensor = "optical_flow")
+        if s_name == 'RGB':
+            return partial(self.rgb_callback, weak_self = weak_self, sensor = "RGB")
         
-        elif "dvs" in type_id:
-            return partial(self.dvs_callback, weak_self = weak_self, sensor = "dvs")
+        if s_name == 'RGB_1000':
+            return partial(self.rgb_1000_callback, weak_self = weak_self, sensor = "RGB_1000")
+
+        elif s_name == 'SEMANTIC_SEGMENTATION':
+            return partial(self.segmentation_callback, weak_self = weak_self, sensor = "SEMANTIC_SEGMENTATION")
+
+        elif s_name == "OPTICAL_FLOW":
+            return partial(self.flow_callback, weak_self = weak_self, sensor = "OPTICAL_FLOW")
         
-        elif "lidar" in type_id :
-            return partial(self.lidar_callback, weak_self = weak_self, sensor = "lidar")
+        elif s_name == "DVS":
+            return partial(self.dvs_callback, weak_self = weak_self, sensor = "DVS")
+        
+        elif s_name == "LIDAR" :
+            return partial(self.lidar_callback, weak_self = weak_self, sensor = "LIDAR")
         else:
             raise NotImplementedError
         
@@ -475,6 +484,27 @@ class DataRecorder():
 
         sensor_queue.put((frame, 'rgb_camera'))
 
+    @staticmethod
+    def rgb_1000_callback(image, weak_self, sensor):
+        self = weak_self()
+        save_dir = self.data_save_dirs[sensor]
+        sensor_queue = self.sensor_queues[sensor]
+        
+        frame = self.get_relative_frame(image.frame)
+        frame_file_name = '{:06d}.png'.format(frame)
+        image.save_to_disk(str(save_dir / frame_file_name))
+
+        if self.rgb_count == 0:
+            self.start_time = time.time()
+
+        self.rgb_count += 1
+
+        if self.rgb_count == 1000:
+            print(f"It took {time.time() - self.start_time} seconds to record 1000 frames")
+            self.rgb_count = 0
+
+        sensor_queue.put((frame, 'rgb_camera_1000'))
+
 
     @staticmethod
     def segmentation_callback(segmentation, weak_self, sensor):
@@ -486,8 +516,8 @@ class DataRecorder():
         frame_file_name = '{:06d}.png'.format(frame)
         segmentation.save_to_disk(str(save_dir / frame_file_name))
 
-        if sensor in self.visualize:
-            vis_dir = self.visual_dirs[sensor]
+        vis_dir = self.visual_dirs[sensor]
+        if vis_dir is not None:
             segmentation.save_to_disk(str(vis_dir / frame_file_name), carla.ColorConverter.CityScapesPalette)
 
         sensor_queue.put((frame, 'segmentation_camera'))
@@ -511,12 +541,12 @@ class DataRecorder():
         # Flow values are in the range [-2,2] so it must be scaled
         # we multiply the y component by -1 to get the forward flow (carla documentation)
         flow_uv = np.ndarray((flow.height, flow.width, 3))
-        flow_uv[:,:,0] = raw[:,:,0] * 128.0
-        flow_uv[:,:,1] = raw[:,:,1] * -128.0
+        flow_uv[:,:,0] = raw[:,:,0] * 0.5 * flow.width
+        flow_uv[:,:,1] = raw[:,:,1] * -0.5 * flow.height
 
         # Visualize
-        if sensor in self.visualize:
-            vis_dir = self.visual_dirs[sensor]
+        vis_dir = self.visual_dirs[sensor]
+        if vis_dir is not None:
             # rgb, _ = visualize_optical_flow(flow_uv[:,:,:2])
             # rgb *= 255
             # imageio.imwrite(str(vis_dir / f'vis_{flow.frame}.png'), rgb.astype('uint8'))
@@ -643,11 +673,13 @@ class DataRecorder():
                         first = False
 
                     # Wait for all data to be written to disk.
-                    # try:
-                    #     for queue in self.sensor_queues.values():
-                    #         s_frame = queue.get(True, 1.0)
-                    # except Empty:
-                    #     print("Some of the sensor information is missed")
+                    try:
+                        s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
+
+                        # for queue in self.sensor_queues.values():
+                        #     s_frame = queue.get(True, 1.0)
+                    except Empty:
+                        print("Some of the sensor information is missed")
                 else:
                     self.world.wait_for_tick()
 
@@ -662,6 +694,9 @@ class DataRecorder():
         except KeyboardInterrupt:
             self.stop_recording()
             print("Quitting...")
+            pass
+
+        except:
             pass
 
         finally:

@@ -24,18 +24,6 @@ simulation:
   generationw : all
 
 sensors:
-  # Options :
-  # - rgb
-  # - optical_flow
-  # - dvs
-  # - semantic_segmentation
-  # - lidar
-
-  enable :
-    - rgb
-
-  visualize : []
-  
   location :
     x : 1.0
     y : 0.0
