@@ -1,5 +1,5 @@
 collector:
-  save_dir : "C:/users/abdessamad/CARLA_DATA/DATASET1"
+  save_dir : "C:/users/abdessamad/CARLA_DATA/DATASET_1_FLOWTEST"
   random_seed : null
 
 client:
@@ -34,24 +34,11 @@ sensors:
     image_size_x: 640
     image_size_y: 480
 
-  lidar:
-    range : 100.0
-    noise_stddev : 0.1
-    upper_fov : 20.0
-    lower_fov : -20.0
-    channels : 16.0
-    rotation_frequency : 20.0
-    points_per_second : 300000
-
-  rgb:
-    sensor_tick : 0.001
-    image_size_x: 640
-    image_size_y: 480
-
-  dvs:
-    image_size_x : 640
-    image_size_y : 480
-    refractory_period_ns : 100000000
-
-  optical_flow:
-    sensor_tick: 0.1
+  # lidar:
+  #   range : 100.0
+  #   noise_stddev : 0.1
+  #   upper_fov : 20.0
+  #   lower_fov : -20.0
+  #   channels : 16.0
+  #   rotation_frequency : 20.0
+  #   points_per_second : 300000

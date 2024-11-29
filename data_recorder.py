@@ -36,6 +36,8 @@ from matplotlib import colors
 from functools import partial
 import weakref
 
+import callbacks
+
 def visualize_optical_flow(flow, return_image=False, text=None, scaling=None):
     # flow -> numpy array 2 x height x width
     # 2,h,w -> h,w,2
@@ -435,6 +437,7 @@ class DataRecorder():
     def start_recording(self):
         for s_name, sensor in self.sensors.items():
             # Start all sensors
+            # sensor.listen(self.get_callback_old(s_name))
             sensor.listen(self.get_callback(s_name))
 
     def stop_recording(self):
@@ -448,7 +451,7 @@ class DataRecorder():
         
         return frame - self.first_frame
 
-    def get_callback(self, s_name):
+    def get_callback_old(self, s_name):
         weak_self = weakref.ref(self)
 
         if s_name == 'RGB':
@@ -471,6 +474,17 @@ class DataRecorder():
         else:
             raise NotImplementedError
         
+    def get_callback(self, s_name):
+        callback_name = self.sensors_config[s_name]['callback']
+
+        if not hasattr(callbacks, callback_name):
+            print(f"{callback_name} not implemented, it must be defined in callbacks.py")
+            print(f'The simulation will run anyway, but the "{s_name}" sensor will not work')
+            callback_name = "dummy_callback"
+        
+        callback = getattr(callbacks, callback_name)
+        weak_self = weakref.ref(self)
+        return partial(callback, weak_self=weak_self, sensor = s_name)
     
     @staticmethod
     def rgb_callback(image, weak_self, sensor):
@@ -673,13 +687,13 @@ class DataRecorder():
                         first = False
 
                     # Wait for all data to be written to disk.
-                    try:
-                        s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
+                    # try:
+                    #     s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
 
-                        # for queue in self.sensor_queues.values():
-                        #     s_frame = queue.get(True, 1.0)
-                    except Empty:
-                        print("Some of the sensor information is missed")
+                    # #     for queue in self.sensor_queues.values():
+                    # #         s_frame = queue.get(True, 1.0)
+                    # except Empty:
+                    #     print("Some of the sensor information is missed")
                 else:
                     self.world.wait_for_tick()
 
