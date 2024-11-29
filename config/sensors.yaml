@@ -1,0 +1,51 @@
+RGB:
+  blueprint_name : "sensor.camera.rgb"
+  enable : False
+  visualize : False
+  settings:
+    image_size_x : 640
+    image_size_y : 480
+    sensor_tick : 0.1
+  callback: rgb_callback
+
+RGB_1000:
+  blueprint_name : "sensor.camera.rgb"
+  enable : True
+  visualize : False
+  settings:
+    image_size_x : 640
+    image_size_y : 480
+    sensor_tick : 0.001
+  callback: rgb_1000_callback
+
+OPTICAL_FLOW:
+  blueprint_name : "sensor.camera.optical_flow"
+  enable : True
+  visualize : True
+  settings:
+    image_size_x : 640
+    image_size_y : 480
+    sensor_tick : 0.1
+  callback: flow_callback
+  
+SEMANTIC_SEGMENTATION:
+  blueprint_name : "sensor.camera.semantic_segmentation"
+  enable : True
+  visualize : True
+  settings:
+    image_size_x : 640
+    image_size_y : 480
+    sensor_tick : 0.1
+  callback: semantic_callback
+
+DEPTH_CAMERA:
+  blueprint_name : "sensor.camera.depth"
+  enable : False
+  visualize : False
+  settings:
+    image_size_x : 640
+    image_size_y : 480
+    sensor_tick : 0.1
+  callback: depth_callback
+
+
