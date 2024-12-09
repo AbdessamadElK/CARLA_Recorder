@@ -687,13 +687,13 @@ class DataRecorder():
                         first = False
 
                     # Wait for all data to be written to disk.
-                    # try:
-                    #     s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
+                    try:
+                        s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
 
-                    # #     for queue in self.sensor_queues.values():
-                    # #         s_frame = queue.get(True, 1.0)
-                    # except Empty:
-                    #     print("Some of the sensor information is missed")
+                    #     for queue in self.sensor_queues.values():
+                    #         s_frame = queue.get(True, 1.0)
+                    except Empty:
+                        print("Some of the sensor information is missed")
                 else:
                     self.world.wait_for_tick()
 
@@ -708,9 +708,6 @@ class DataRecorder():
         except KeyboardInterrupt:
             self.stop_recording()
             print("Quitting...")
-            pass
-
-        except:
             pass
 
         finally:

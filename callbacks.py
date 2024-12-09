@@ -74,7 +74,10 @@ def flow_callback(flow, weak_self, sensor):
     frame = recorder.get_relative_frame(flow.frame)
     frame_file_name = '{:06d}.png'.format(frame)
 
-    raw = np.frombuffer(flow.raw_data, dtype=np.float32)
+
+    raw = np.array([(pixel.x, pixel.y) for pixel in flow], dtype=np.float32)
+    raw = raw.reshape((flow.height, flow.width, 2))
+    # raw = np.frombuffer(flow.raw_data, dtype=np.float32)
 
     # print(np.min(raw), np.max(raw), np.mean(raw))
 
@@ -112,3 +115,41 @@ def flow_callback(flow, weak_self, sensor):
     imageio.imwrite(str(save_dir / frame_file_name), flow_uv.astype(np.uint16), format='PNG-FI')
 
     sensor_queue.put((frame, 'optical_flow_camera'))
+
+
+def dvs_callback(events, weak_self, sensor):
+        recorder = weak_self()
+        save_dir = recorder.data_save_dirs[sensor]
+        sensor_queue = recorder.sensor_queues[sensor]
+
+        frame = recorder.get_relative_frame(events.frame)
+        events_file_name = '{:06d}.npz'.format(frame)
+
+        dvs_events = np.frombuffer(events.raw_data, dtype=np.dtype([
+            ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', bool)]))
+        
+        dvs_events_output = {key : dvs_events[:][key] for key in ['x', 'y', 't', 'pol']}
+
+        np.savez(save_dir / events_file_name, **dvs_events_output)
+
+        
+        # Cumulate events
+        # for key in recorder.events_cumulator:
+        #     recorder.events_cumulator[key].append(dvs_events[:][key].copy())
+        
+        # if len(recorder.events_cumulator['x']) >= 100:
+        #     x = np.concatenate(recorder.events_cumulator['x'])
+        #     y = np.concatenate(recorder.events_cumulator['y'])
+        #     t = np.concatenate(recorder.events_cumulator['t'])
+        #     p = np.concatenate(recorder.events_cumulator['pol']).astype(int)
+
+        #     if sensor in recorder.visualize:
+        #         vis_dir = recorder.visual_dirs[sensor]
+        #         dvs_image = np.zeros((events.height, events.width, 3), dtype=np.uint8)
+        #         dvs_image[y[:], x[:], p[:] * 2] = 255
+        #         imageio.imwrite(str(vis_dir / '{:06d}.png'.format(frame)), dvs_image)
+
+            # for key in recorder.events_cumulator:
+            #     recorder.events_cumulator[key] = []
+
+        sensor_queue.put((frame, 'dvs_camera'))
