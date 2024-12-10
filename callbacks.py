@@ -75,20 +75,24 @@ def flow_callback(flow, weak_self, sensor):
     frame_file_name = '{:06d}.png'.format(frame)
 
 
-    raw = np.array([(pixel.x, pixel.y) for pixel in flow], dtype=np.float32)
+    raw = np.array([(pixel.x, pixel.y) for pixel in flow], dtype=np.float64)
     raw = raw.reshape((flow.height, flow.width, 2))
     # raw = np.frombuffer(flow.raw_data, dtype=np.float32)
 
     # print(np.min(raw), np.max(raw), np.mean(raw))
 
-    raw = raw.reshape((flow.height, flow.width, 2))
+    # raw = raw.reshape((flow.height, flow.width, 2))
 
     # Flow values are in the range [-2,2] so it must be scaled
     # we multiply the y component by -1 to get the forward flow (carla documentation)
     flow_uv = np.ndarray((flow.height, flow.width, 3))
-    flow_uv[:,:,0] = raw[:,:,0] * 0.5 * flow.width
-    flow_uv[:,:,1] = raw[:,:,1] * 0.5 * flow.height * -1
+    
+    # flow_uv[:,:,0] = raw[:,:,0]
+    # flow_uv[:,:,1] = raw[:,:,1] * -1.0
 
+    flow_uv[:,:,0] = raw[:,:,0] * 0.5 * float(flow.width)
+    flow_uv[:,:,1] = raw[:,:,1] * 0.5 * float(flow.height) * -1
+    
     # Visualize
     vis_dir = recorder.visual_dirs[sensor]
     if vis_dir is not None:

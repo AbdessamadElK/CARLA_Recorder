@@ -20,7 +20,7 @@ RGB_1000:
 
 OPTICAL_FLOW:
   blueprint_name : "sensor.camera.optical_flow"
-  enable : False
+  enable : True
   visualize : True
   settings:
     image_size_x : 640
