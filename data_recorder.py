@@ -29,7 +29,6 @@ import numpy as np
 
 from flow_vis import flow_to_color, flow_uv_to_colors
 import cv2
-import open3d as o3d
 from matplotlib import cm
 from matplotlib import colors
 
@@ -687,13 +686,13 @@ class DataRecorder():
                         first = False
 
                     # Wait for all data to be written to disk.
-                    try:
-                        s_frame = self.sensor_queues['RGB_1000'].get(True, 1.0)
+                    # try:
+                    #     s_frame = self.sensor_queues['RGB'].get(True, 1.0)
 
-                    #     for queue in self.sensor_queues.values():
-                    #         s_frame = queue.get(True, 1.0)
-                    except Empty:
-                        print("Some of the sensor information is missed")
+                    # #     for queue in self.sensor_queues.values():
+                    # #         s_frame = queue.get(True, 1.0)
+                    # except Empty:
+                    #     print("Some of the sensor information is missed")
                 else:
                     self.world.wait_for_tick()
 

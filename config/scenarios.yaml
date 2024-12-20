@@ -1,7 +1,7 @@
 ### TOWN_01_DAY
 Scenario 1:
-  name : RGB_1000_fps
-  map : Town01
+  name : Issue_033
+  map : Town10HD
   number_of_vehicles : 30
   number_of_walkers : 10
   seed_walkers : 0
@@ -20,7 +20,7 @@ Scenario 1:
     # rayleigh_scattering_scale : 0.0
     # dust_storm : 0.0
   car_lights_on : False
-  recording_duration : 20 #minutes
+  recording_duration : 30 #minutes
 
 
 ### TOWN_01_EVENING

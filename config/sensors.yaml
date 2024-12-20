@@ -1,16 +1,16 @@
 RGB:
   blueprint_name : "sensor.camera.rgb"
-  enable : False
+  enable : True
   visualize : False
   settings:
-    image_size_x : 640
-    image_size_y : 480
-    sensor_tick : 0.1
+    image_size_x : 1280
+    image_size_y : 690
+    sensor_tick : 0.033
   callback: rgb_callback
 
 RGB_1000:
   blueprint_name : "sensor.camera.rgb"
-  enable : True
+  enable : False
   visualize : False
   settings:
     image_size_x : 640
@@ -23,9 +23,9 @@ OPTICAL_FLOW:
   enable : True
   visualize : True
   settings:
-    image_size_x : 640
-    image_size_y : 480
-    sensor_tick : 0.1
+    image_size_x : 1280
+    image_size_y : 690
+    sensor_tick : 0.033
   callback: flow_callback
   
 SEMANTIC_SEGMENTATION:
@@ -50,7 +50,7 @@ DEPTH_CAMERA:
 
 DVS:
   blueprint_name : "sensor.camera.dvs"
-  enable : True
+  enable : False
   visualize : False
   settings:
     image_size_x : 640

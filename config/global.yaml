@@ -15,7 +15,7 @@ traffic_manager:
 
 simulation:
   synchronous : True
-  time_step : 0.001
+  time_step : 0.033
   no_rendering : True
   hero : "vehicle.audi.tt"
   filterv : "vehicle.*"

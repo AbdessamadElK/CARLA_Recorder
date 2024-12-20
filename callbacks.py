@@ -6,6 +6,8 @@ from flow_vis import flow_uv_to_colors
 
 import time
 
+import torch
+
 def dummy_callback(data, weak_self, sensor):
     """
         Just a dummy callback to be loaded when the actual callback is not defined.
@@ -66,32 +68,40 @@ def semantic_callback(segmentation, weak_self, sensor):
     sensor_queue.put((frame, 'segmentation_camera'))
 
 
-def flow_callback(flow, weak_self, sensor):
+def flow_callback(data, weak_self, sensor):
     recorder = weak_self()
     save_dir = recorder.data_save_dirs[sensor]
     sensor_queue = recorder.sensor_queues[sensor]
 
-    frame = recorder.get_relative_frame(flow.frame)
+    frame = recorder.get_relative_frame(data.frame)
     frame_file_name = '{:06d}.png'.format(frame)
 
+    width = data.width
+    height = data.height
 
-    raw = np.array([(pixel.x, pixel.y) for pixel in flow], dtype=np.float64)
-    raw = raw.reshape((flow.height, flow.width, 2))
-    # raw = np.frombuffer(flow.raw_data, dtype=np.float32)
+    raw_flow = np.frombuffer(data.raw_data, dtype=np.float32)
+    raw_flow = raw_flow.reshape((height, width, 2))
 
-    # print(np.min(raw), np.max(raw), np.mean(raw))
+    flow = np.ndarray((height, width, 2))
+    flow[:,:,0] = raw_flow[:,:,0] * 0.5 * width
+    flow[:,:,1] = raw_flow[:,:,1] * 0.5 * height * -1
 
-    # raw = raw.reshape((flow.height, flow.width, 2))
+    # flow_rgb = flow_uv_to_colors(flow[:,:,0], flow[:,:,1])
+
+    # flow = np.array([(pixel.x, pixel.y) for pixel in flow], dtype=np.float64)
+    # flow = flow.reshape((flow.height, flow.width, 2))
+
+    # flow = np.frombuffer(flow.raw_data, dtype=np.float32)
+
+    # print(np.min(flow), np.max(flow), np.mean(flow))
+
+    # flow = flow.reshape((flow.height, flow.width, 2))
 
     # Flow values are in the range [-2,2] so it must be scaled
     # we multiply the y component by -1 to get the forward flow (carla documentation)
-    flow_uv = np.ndarray((flow.height, flow.width, 3))
-    
-    # flow_uv[:,:,0] = raw[:,:,0]
-    # flow_uv[:,:,1] = raw[:,:,1] * -1.0
 
-    flow_uv[:,:,0] = raw[:,:,0] * 0.5 * float(flow.width)
-    flow_uv[:,:,1] = raw[:,:,1] * 0.5 * float(flow.height) * -1
+    # flow_uv[:,:,0] = flow[:,:,0] * 0.5 * float(flow.width)
+    # flow_uv[:,:,1] = flow[:,:,1] * 0.5 * float(flow.height) * -1
     
     # Visualize
     vis_dir = recorder.visual_dirs[sensor]
@@ -108,12 +118,14 @@ def flow_callback(flow, weak_self, sensor):
             array = array[:, :, ::-1]
             imageio.imwrite(str(vis_dir / frame_file_name), array)
         else:
-            vis = flow_uv_to_colors(u = flow_uv[:,:,0], v = flow_uv[:,:,1])
+            vis = flow_uv_to_colors(u = flow[:,:,0], v = flow[:,:,1])
             imageio.imwrite(str(vis_dir / frame_file_name), vis.astype('uint8'))
 
 
 
     # Save flow
+    flow_uv = np.ndarray((height, width, 3))
+    flow_uv [:,:,:2] = flow
     flow_uv = flow_uv * 128.0 + 2**15 
     flow_uv[:,:,2] = 1
     imageio.imwrite(str(save_dir / frame_file_name), flow_uv.astype(np.uint16), format='PNG-FI')
@@ -157,3 +169,12 @@ def dvs_callback(events, weak_self, sensor):
             #     recorder.events_cumulator[key] = []
 
         sensor_queue.put((frame, 'dvs_camera'))
+
+
+def depth_callback(data, weak_self, sensor):
+    recorder = weak_self()
+    save_dir = recorder.data_save_dirs[sensor]
+    sensor_queue = recorder.sensor_queues[sensor]
+
+    # TODO : Complete this callback
+    pass
